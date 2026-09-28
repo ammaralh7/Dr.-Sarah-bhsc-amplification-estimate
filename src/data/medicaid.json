@@ -11,553 +11,632 @@
    "Sensia 5",
    "All styles",
    "ALL",
-   300
+   300,
+   "3 years \u00b7 $0 loss & damage deductible"
   ],
   [
    "ReSound",
    "Vivia 5",
    "All styles",
    "ALL",
-   300
+   300,
+   "3 years \u00b7 $0 loss & damage deductible"
   ],
   [
    "ReSound",
    "Nexia 5",
    "All styles",
    "ALL",
-   305
+   305,
+   "3 years \u00b7 $0 loss & damage deductible"
   ],
   [
    "ReSound",
    "ENZO IA 5",
    "All styles",
    "ALL",
-   300
+   300,
+   "3 years \u00b7 $0 loss & damage deductible"
   ],
   [
    "ReSound",
    "Sensia 4",
    "All styles",
    "ALL",
-   250
+   250,
+   "3 years \u00b7 $0 loss & damage deductible"
   ],
   [
    "ReSound",
    "ENZO IA 4",
    "All styles",
    "ALL",
-   250
+   250,
+   "3 years \u00b7 $0 loss & damage deductible"
   ],
   [
    "ReSound",
    "Vivia 4",
    "All styles",
    "ALL",
-   250
+   250,
+   "3 years \u00b7 $0 loss & damage deductible"
   ],
   [
    "ReSound",
    "Sensia, Vivia & Nexia CROS transmitter",
    "All styles",
    "ALL",
-   275
+   275,
+   "3 years \u00b7 $0 loss & damage deductible"
   ],
   [
    "ReSound",
    "Savi 3",
    "All styles",
    "ALL",
-   225
+   225,
+   "3 years \u00b7 $0 loss & damage deductible"
   ],
   [
    "ReSound",
    "Savi 2",
    "All styles",
    "ALL",
-   195
+   195,
+   "3 years \u00b7 $0 loss & damage deductible"
   ],
   [
    "ReSound",
    "KEY 4",
    "All styles",
    "ALL",
-   295
+   295,
+   "3 years \u00b7 $0 loss & damage deductible"
   ],
   [
    "ReSound",
    "KEY 3",
    "All styles",
    "ALL",
-   195
+   195,
+   "3 years \u00b7 $0 loss & damage deductible"
   ],
   [
    "ReSound",
    "KEY 2",
    "All styles",
    "ALL",
-   150
+   150,
+   "3 years \u00b7 $0 loss & damage deductible"
   ],
   [
    "Phonak",
    "Audeo E50-R",
    "RIC",
    "RIC",
-   330.0
+   330.0,
+   "3 years"
   ],
   [
    "Phonak",
    "Audeo E30-R",
    "RIC",
    "RIC",
-   330.0
+   330.0,
+   "3 years"
   ],
   [
    "Phonak",
    "Audeo I50-R",
    "RIC",
    "RIC",
-   330.0
+   330.0,
+   "3 years"
   ],
   [
    "Phonak",
    "Audeo I30-R",
    "RIC",
    "RIC",
-   330.0
+   330.0,
+   "3 years"
   ],
   [
    "Phonak",
    "Virto I30-R",
    "Custom \u00b7 ITE / ITC / CIC / IIC",
    "CUSTOM",
-   320.0
+   320.0,
+   "3 years"
   ],
   [
    "Phonak",
    "Virto I30-10 NW O",
    "Custom \u00b7 ITE / ITC / CIC / IIC",
    "CUSTOM",
-   305.0
+   305.0,
+   "3 years"
   ],
   [
    "Phonak",
    "Audeo L50-RT",
    "RIC",
    "RIC",
-   330.0
+   330.0,
+   "3 years"
   ],
   [
    "Phonak",
    "Audeo L30-RT",
    "RIC",
    "RIC",
-   330.0
+   330.0,
+   "3 years"
   ],
   [
    "Phonak",
    "Audeo L50-R",
    "RIC",
    "RIC",
-   330.0
+   330.0,
+   "3 years"
   ],
   [
    "Phonak",
    "Audeo L30-R",
    "RIC",
    "RIC",
-   330.0
+   330.0,
+   "3 years"
   ],
   [
    "Phonak",
    "Audeo L50-312",
    "RIC",
    "RIC",
-   330.0
+   330.0,
+   "3 years"
   ],
   [
    "Phonak",
    "Audeo L30-312",
    "RIC",
    "RIC",
-   330.0
+   330.0,
+   "3 years"
   ],
   [
    "Phonak",
    "Naida L50-PR",
    "BTE",
    "BTE",
-   330.0
+   330.0,
+   "3 years"
   ],
   [
    "Phonak",
    "Naida L30-PR",
    "BTE",
    "BTE",
-   330.0
+   330.0,
+   "3 years"
   ],
   [
    "Phonak",
    "Naida L50-UP",
    "BTE",
    "BTE",
-   330.0
+   330.0,
+   "3 years"
   ],
   [
    "Phonak",
    "Naida L30-UP",
    "BTE",
    "BTE",
-   330.0
+   330.0,
+   "3 years"
   ],
   [
    "Phonak",
    "Naida L50-SP",
    "BTE",
    "BTE",
-   330.0
+   330.0,
+   "3 years"
   ],
   [
    "Phonak",
    "Naida L30-SP",
    "BTE",
    "BTE",
-   330.0
+   330.0,
+   "3 years"
   ],
   [
    "Phonak",
    "Naida L50-M",
    "BTE",
    "BTE",
-   330.0
+   330.0,
+   "3 years"
   ],
   [
    "Phonak",
    "Naida L30-M",
    "BTE",
    "BTE",
-   330.0
+   330.0,
+   "3 years"
   ],
   [
    "Phonak",
    "Sky L70-PR",
    "BTE",
    "BTE",
-   330.0
+   330.0,
+   "5 years"
   ],
   [
    "Phonak",
    "Sky L50-PR",
    "BTE",
    "BTE",
-   330.0
+   330.0,
+   "5 years"
   ],
   [
    "Phonak",
    "Sky L70-UP",
    "BTE",
    "BTE",
-   330.0
+   330.0,
+   "5 years"
   ],
   [
    "Phonak",
    "Sky L50-UP",
    "BTE",
    "BTE",
-   330.0
+   330.0,
+   "5 years"
   ],
   [
    "Phonak",
    "Sky L70-SP",
    "BTE",
    "BTE",
-   330.0
+   330.0,
+   "5 years"
   ],
   [
    "Phonak",
    "Sky L50-SP",
    "BTE",
    "BTE",
-   330.0
+   330.0,
+   "5 years"
   ],
   [
    "Phonak",
    "Sky L70-M",
    "BTE",
    "BTE",
-   330.0
+   330.0,
+   "5 years"
   ],
   [
    "Phonak",
    "Sky L50-M",
    "BTE",
    "BTE",
-   330.0
+   330.0,
+   "5 years"
   ],
   [
    "Phonak",
    "Virto P50-312",
    "Custom \u00b7 ITE / ITC / CIC / IIC",
    "CUSTOM",
-   305.0
+   305.0,
+   "3 years \u00b7 custom product warranty"
   ],
   [
    "Phonak",
    "Virto P30-312",
    "Custom \u00b7 ITE / ITC / CIC / IIC",
    "CUSTOM",
-   305.0
+   305.0,
+   "3 years \u00b7 custom product warranty"
   ],
   [
    "Phonak",
    "Virto P50-312 NW O",
    "Custom \u00b7 ITE / ITC / CIC / IIC",
    "CUSTOM",
-   305.0
+   305.0,
+   "3 years \u00b7 custom product warranty"
   ],
   [
    "Phonak",
    "Virto P30-312 NW O",
    "Custom \u00b7 ITE / ITC / CIC / IIC",
    "CUSTOM",
-   305.0
+   305.0,
+   "3 years \u00b7 custom product warranty"
   ],
   [
    "Phonak",
    "Naida Link M",
    "BTE",
    "BTE",
-   330.0
+   330.0,
+   "3 years"
   ],
   [
    "Phonak",
    "Sky Link M",
    "BTE",
    "BTE",
-   330.0
+   330.0,
+   "5 years"
   ],
   [
    "Phonak",
    "CROS P-13",
    "CROS \u00b7 BTE",
    "BTE",
-   330.0
+   330.0,
+   "3 years \u00b7 custom product warranty"
   ],
   [
    "Phonak",
    "CROS E-R",
    "CROS \u00b7 RIC",
    "RIC",
-   330.0
+   330.0,
+   "3 years"
   ],
   [
    "Phonak",
    "CROS I-R",
    "CROS \u00b7 RIC",
    "RIC",
-   330.0
+   330.0,
+   "3 years"
   ],
   [
    "Phonak",
    "CROS L-R",
    "CROS \u00b7 RIC",
    "RIC",
-   330.0
+   330.0,
+   "3 years"
   ],
   [
    "Starkey",
    "Omega AI 16",
    "RIC \u00b7 rechargeable",
    "RIC",
-   330.0
+   330.0,
+   ""
   ],
   [
    "Starkey",
    "Omega AI 16",
    "RIC \u00b7 312 battery",
    "RIC",
-   330.0
+   330.0,
+   ""
   ],
   [
    "Starkey",
    "Omega AI 16",
    "mini RIC \u00b7 rechargeable",
    "RIC",
-   330.0
+   330.0,
+   ""
   ],
   [
    "Starkey",
    "Omega AI 16",
    "CIC \u00b7 312 battery",
    "CIC",
-   330.0
+   330.0,
+   ""
   ],
   [
    "Starkey",
    "Omega AI CROS/BiCROS",
    "RIC \u00b7 312 battery",
    "RIC",
-   242.0
+   242.0,
+   ""
   ],
   [
    "Starkey",
    "G Series AI 16",
    "BTE \u00b7 13 battery",
    "BTE",
-   330.0
+   330.0,
+   "39 months"
   ],
   [
    "Starkey",
    "G Series AI 16",
    "BTE \u00b7 13 battery \u00b7 Power Plus",
    "BTE",
-   330.0
+   330.0,
+   "39 months"
   ],
   [
    "Starkey",
    "G Series AI 12",
    "RIC \u00b7 rechargeable",
    "RIC",
-   330.0
+   330.0,
+   "39 months"
   ],
   [
    "Starkey",
    "G Series AI 12",
    "RIC \u00b7 312 battery",
    "RIC",
-   330.0
+   330.0,
+   "39 months"
   ],
   [
    "Starkey",
    "G Series AI 12",
    "BTE \u00b7 13 battery",
    "BTE",
-   330.0
+   330.0,
+   "39 months"
   ],
   [
    "Starkey",
    "G Series AI 12",
    "BTE \u00b7 13 battery \u00b7 Power Plus",
    "BTE",
-   330.0
+   330.0,
+   "39 months"
   ],
   [
    "Starkey",
    "G Series AI 10",
    "RIC \u00b7 rechargeable",
    "RIC",
-   330.0
+   330.0,
+   "15 months"
   ],
   [
    "Starkey",
    "G Series AI 10",
    "RIC \u00b7 312 battery",
    "RIC",
-   305.0
+   305.0,
+   "15 months"
   ],
   [
    "Starkey",
    "G Series AI 10",
    "BTE \u00b7 13 battery",
    "BTE",
-   305.0
+   305.0,
+   "15 months"
   ],
   [
    "Starkey",
    "G Series AI 10",
    "BTE \u00b7 13 battery \u00b7 Power Plus",
    "BTE",
-   305.0
+   305.0,
+   "15 months"
   ],
   [
    "Starkey",
    "Genesis AI 12",
    "CIC \u00b7 312 battery",
    "CIC",
-   305.0
+   305.0,
+   "36 months"
   ],
   [
    "Starkey",
    "Genesis AI 12",
    "ITC \u00b7 rechargeable",
    "ITC",
-   330.0
+   330.0,
+   "36 months"
   ],
   [
    "Starkey",
    "Genesis AI 12",
    "Half shell \u00b7 rechargeable",
    "ITE",
-   330.0
+   330.0,
+   "36 months"
   ],
   [
    "Starkey",
    "Genesis AI 12",
    "ITE \u00b7 rechargeable",
    "ITE",
-   330.0
+   330.0,
+   "36 months"
   ],
   [
    "Starkey",
    "Genesis AI 12 NW",
    "CIC \u00b7 10 battery",
    "CIC",
-   305.0
+   305.0,
+   "36 months"
   ],
   [
    "Starkey",
    "Evolv AI 1200",
    "BTE \u00b7 rechargeable",
    "BTE",
-   330.0
+   330.0,
+   "39 months"
   ],
   [
    "Starkey",
    "Evolv AI 1200",
    "ITC \u00b7 rechargeable",
    "ITC",
-   330.0
+   330.0,
+   "36 months"
   ],
   [
    "Starkey",
    "Evolv AI 1200",
    "Half shell \u00b7 rechargeable",
    "ITE",
-   330.0
+   330.0,
+   "36 months"
   ],
   [
    "Starkey",
    "Evolv AI 1200",
    "ITE \u00b7 rechargeable",
    "ITE",
-   330.0
+   330.0,
+   "36 months"
   ],
   [
    "Starkey",
    "Evolv AI 1000",
    "BTE \u00b7 rechargeable",
    "BTE",
-   330.0
+   330.0,
+   "15 months"
   ],
   [
    "Starkey",
    "Evolv AI 1000",
    "ITC \u00b7 rechargeable",
    "ITC",
-   330.0
+   330.0,
+   "12 months"
   ],
   [
    "Starkey",
    "Evolv AI 1000",
    "Half shell \u00b7 rechargeable",
    "ITE",
-   330.0
+   330.0,
+   "12 months"
   ],
   [
    "Starkey",
    "Evolv AI 1000",
    "ITE \u00b7 rechargeable",
    "ITE",
-   330.0
+   330.0,
+   "12 months"
   ]
  ],
  "sources": {
