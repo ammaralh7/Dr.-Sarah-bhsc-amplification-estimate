@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ChevronRight, Copy, RotateCcw, Search, Info } from "lucide-react";
-import { NavBar, NavButton, ThemeButton, Section, Tile, Group, Row, SearchField, Sheet, PriceBar, Capsule, Checkmark } from "@/components/ios";
+import { NavBar, NavButton, ThemeButton, Section, Tile, Group, Row, SearchField, Sheet, SheetPinned, PriceBar, Capsule, Checkmark } from "@/components/ios";
 import { SegmentedControl } from "@/components/ui/segmented-control";
-import { RingPill } from "@/components/ui/ring-pill";
+import { UndoPill } from "@/components/ui/undo-pill";
+import { BlurFade } from "@/components/ui/blur-fade";
 import { money, fits, isCros, MFRS, STYLES } from "@/lib/pricing";
 import MED from "@/data/medicaid.json";
 
@@ -93,15 +94,15 @@ export default function Medicaid({ menu = null }) {
 
         {shown > 1 && (
           <Section id="n" sectionRef={R("n")} title="One aid or two?">
-            <SegmentedControl label="One aid or two" value={s.n ? String(s.n) : null} onChange={(v) => set({ n: +v })}
+            <SegmentedControl label="One aid or two" value={s.n ? String(s.n) : null} onValueChange={(v) => set({ n: +v })}
               options={[{ value: "1", label: "One aid" }, { value: "2", label: "Two aids" }]} />
           </Section>
         )}
 
         {shown > 2 && (
           <Section id="style" sectionRef={R("style")} title="Style">
-            <SegmentedControl label="Style" itemClassName="basis-[30%]" value={s.style}
-              onChange={(st) => set({ style: st, model: s.model != null && fits(MODELS[s.model][3], st) ? s.model : null })}
+            <SegmentedControl label="Style" value={s.style}
+              onValueChange={(st) => set({ style: st, model: s.model != null && fits(MODELS[s.model][3], st) ? s.model : null })}
               options={STYLES.map(([st]) => ({ value: st, label: st, disabled: !styleAvail(s.mfr, st) }))} />
           </Section>
         )}
@@ -114,15 +115,18 @@ export default function Medicaid({ menu = null }) {
 
 
         {finished && (
-          <section ref={R("estimate")} className="arrive min-w-0 scroll-mt-[calc(8.5rem+env(safe-area-inset-top,0px))] border-t border-sep pt-7">
+          <BlurFade className="min-w-0"><section ref={R("estimate")} className="min-w-0 scroll-mt-[calc(8.5rem+env(safe-area-inset-top,0px))] border-t border-sep pt-7">
             <Receipt s={s} set={set} onCopy={() => setToast((t) => t + 1)} onReset={reset} />
-          </section>
+          </section></BlurFade>
         )}
       </main>
 
       <PriceBar label={m ? `Medicaid · ${m[0]} ${m[1]} · ${s.n === 2 ? "pair" : "one aid"}` : "Medicaid estimate"} amount={m && s.n ? money(total(s)) : "—"}
         action={finished ? <Capsule onClick={() => jump("estimate")}>Review</Capsule> : null} />
-      {toast > 0 && <RingPill key={toast} label="Estimate copied" onDone={() => setToast(0)} />}
+      {/* Copy confirmation: Undo Pill (21st.dev #29941, components/ui/undo-pill.tsx); OK closes it early */}
+      <div className="pointer-events-none fixed inset-x-0 bottom-[calc(6.5rem+env(safe-area-inset-bottom,0px))] z-50 flex justify-center px-4">
+        <UndoPill open={toast > 0} label="Estimate copied" duration={4} undoLabel="OK" onUndo={() => setToast(0)} onExpire={() => setToast(0)} />
+      </div>
     </div>
   );
 }
@@ -151,8 +155,8 @@ function Picker({ s, onPick }) {
         <ChevronRight className="h-5 w-5 shrink-0 text-label3" />
       </button>
       <Sheet open={open} onClose={() => { setOpen(false); setQ(""); }} title={`${s.mfr} ${s.style} · Medicaid`}>
-        <div className="px-4 pb-3"><SearchField inputRef={input} value={q} onChange={setQ} placeholder="Search models" /></div>
-        <div className="grid flex-1 grid-cols-1 gap-6 overflow-y-auto overscroll-contain px-4 pb-[calc(1.5rem+env(safe-area-inset-bottom,0px))]">
+        <SheetPinned><SearchField inputRef={input} value={q} onChange={setQ} placeholder="Search models" /></SheetPinned>
+        <div className="grid grid-cols-1 gap-6 pb-2">
           {list.length ? (
             <Group header={MED.sources[s.mfr]} footer={`Price per aid. Models over ${money(MED.cap)} aren't listed.`}>
               {list.map(([mm, i], j) => (

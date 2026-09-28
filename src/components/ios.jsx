@@ -1,11 +1,11 @@
 /* iOS building blocks for the Amplification Estimate, drawn from Apple's Human Interface
    Guidelines: large-title navigation bar, selection tiles (Apple Store configurator),
    bottom sheet, grouped inset lists, switches, search field and the frosted price bar. */
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
-import { createPortal } from "react-dom";
+import { useEffect, useState } from "react";
 import { Check, Moon, Search, Sun, X } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { springEase, reduceMotion } from "@/lib/motion";
+import { BlurFade } from "@/components/ui/blur-fade";
+import { Drawer, DrawerContent } from "@/components/ui/bottom-sheet";
 import logo from "@/assets/bhsc-logo.png";
 
 export const BHSC_LOGO = logo;
@@ -66,15 +66,18 @@ export function ThemeButton() {
   );
 }
 
-/* ── Section: Apple Store headline — bold question, quiet helper, same line ── */
+/* ── Section: Apple Store headline — bold question, quiet helper, same line.
+      Arrives with Blur Fade (21st.dev #1079, components/ui/blur-fade.tsx). ── */
 export function Section({ id, title, lead, children, sectionRef }) {
   return (
-    <section id={id} ref={sectionRef} className="min-w-0 arrive scroll-mt-[calc(8.5rem+env(safe-area-inset-top,0px))] scroll-mb-32">
-      <h2 className="mb-3 text-[20px] font-semibold leading-tight tracking-[-0.015em]">
-        {title}{lead && <> <span className="text-label2">{lead}</span></>}
-      </h2>
-      {children}
-    </section>
+    <BlurFade className="min-w-0">
+      <section id={id} ref={sectionRef} className="min-w-0 scroll-mt-[calc(8.5rem+env(safe-area-inset-top,0px))] scroll-mb-32">
+        <h2 className="mb-3 text-[20px] font-semibold leading-tight tracking-[-0.015em]">
+          {title}{lead && <> <span className="text-label2">{lead}</span></>}
+        </h2>
+        {children}
+      </section>
+    </BlurFade>
   );
 }
 
@@ -133,39 +136,24 @@ export function SearchField({ value, onChange, placeholder, inputRef }) {
   );
 }
 
-/* ── Bottom sheet: rises on the drawer spring {150, 27, 1} (21st.dev #23558, as in Biladi Ops) ── */
+/* ── Bottom sheet: 21st.dev #31360 (components/ui/bottom-sheet.tsx, Base UI Drawer).
+      Swipe down, the close button, the backdrop or Escape all close it. Sized as a large
+      iOS sheet that floats above the home indicator and never runs past the screen edge. ── */
 export function Sheet({ open, onClose, title, children, footer }) {
-  const panel = useRef(null);
-  useLayoutEffect(() => {
-    if (!open || !panel.current || !panel.current.animate || reduceMotion()) return;
-    const s = springEase(150, 27, 1);
-    panel.current.animate([{ transform: "translateY(100%)" }, { transform: "translateY(0)" }], s);
-  }, [open]);
-  useEffect(() => {
-    if (!open) return;
-    const key = (e) => e.key === "Escape" && onClose();
-    const html = document.documentElement, prev = html.style.overflow;
-    html.style.overflow = "hidden";
-    window.addEventListener("keydown", key);
-    return () => { window.removeEventListener("keydown", key); html.style.overflow = prev; };
-  }, [open, onClose]);
-  if (!open) return null;
-  return createPortal(
-    <div className="fixed inset-0 z-50" role="dialog" aria-modal="true" aria-label={title}>
-      <div className="scrim-in absolute inset-0 bg-black/40" onClick={onClose} />
-      <div ref={panel} className="absolute inset-x-0 bottom-0 mx-auto flex max-h-[88dvh] max-w-2xl flex-col rounded-t-[14px] bg-bg shadow-[0_-10px_40px_rgba(0,0,0,0.25)]">
-        <div className="mx-auto mt-2 h-[5px] w-9 rounded-full bg-label3" />
-        <div className="flex items-center justify-between px-4 pb-2 pt-2">
-          <span className="w-16" />
-          <h3 className="text-[17px] font-semibold">{title}</h3>
-          <button type="button" onClick={onClose} className="w-16 text-right text-[17px] font-semibold text-tint">Done</button>
-        </div>
+  return (
+    <Drawer open={open} onOpenChange={(next) => { if (!next) onClose(); }}>
+      <DrawerContent title={title}
+        className="bottom-[calc(0.5rem+env(safe-area-inset-bottom,0px))] h-[85dvh] max-h-[85dvh] w-[min(calc(100vw-1rem),42rem)]">
         {children}
         {footer}
-      </div>
-    </div>,
-    document.body
+      </DrawerContent>
+    </Drawer>
   );
+}
+
+/* Sheet top row that stays put while the list under it scrolls (the search field). */
+export function SheetPinned({ children }) {
+  return <div className="sticky -top-4 z-10 -mx-5 -mt-4 bg-bg px-5 pb-3 pt-4">{children}</div>;
 }
 
 /* ── Frosted price bar (Apple Store bag bar) ── */

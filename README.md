@@ -26,3 +26,5 @@ This runs `vite build` and then `postbuild.py`, and writes `dist/index.html`.
 ## Built with
 
 React 18, Vite 5, Tailwind CSS 3 and lucide-react. `vite-plugin-singlefile` inlines everything into one HTML file.
+
+The animations are real 21st.dev components, in `src/components/ui/` with the 21st.dev URL and ID at the top of each file: Blur Fade #1079, Segmented Control #23552, the sidebar drawer #23558, the bottom sheet #31360 and Undo Pill #29941. They run on Motion and Base UI.

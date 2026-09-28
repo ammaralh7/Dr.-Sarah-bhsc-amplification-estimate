@@ -1,7 +1,12 @@
 import animate from "tailwindcss-animate";
 /** Apple (iOS Human Interface) tokens — every colour is a CSS variable in src/index.css. */
 export default {
-  content: ["./index.html", "./src/**/*.{js,jsx}"],
+  content: ["./index.html", "./src/**/*.{js,jsx,ts,tsx}"],
+  // dark: in the 21st.dev components follows the app's sun/moon switch (html[data-theme]), else the system
+  darkMode: ["variant", [
+    "@media (prefers-color-scheme: dark) { &:not(:where([data-theme=light], [data-theme=light] *)) }",
+    "&:where([data-theme=dark], [data-theme=dark] *)",
+  ]],
   theme: {
     extend: {
       fontFamily: {

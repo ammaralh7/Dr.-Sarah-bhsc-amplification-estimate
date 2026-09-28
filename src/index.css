@@ -56,24 +56,23 @@
 .hairline { box-shadow: inset 0 -0.5px 0 var(--sep); }
 .material { background: var(--material); -webkit-backdrop-filter: saturate(180%) blur(20px); backdrop-filter: saturate(180%) blur(20px); }
 
-/* Section arrival — Blur Fade (21st.dev #1079, as in the Biladi dashboard): 6px rise + 6px blur */
-.arrive { animation: arrive .45s cubic-bezier(.22, 1, .36, 1) backwards; }
-@keyframes arrive { from { opacity: 0; transform: translateY(10px); filter: blur(6px); } }
 /* Tile press, iOS-style */
 .press { transition: transform .18s cubic-bezier(.22, 1, .36, 1), box-shadow .2s ease, background-color .2s ease; }
 .press:active { transform: scale(.97); }
-/* Bottom sheet scrim */
-.scrim-in { animation: scrimIn .25s ease-out; }
-@keyframes scrimIn { from { opacity: 0; } }
-@media (prefers-reduced-motion: reduce) {
-  .arrive, .scrim-in { animation: none !important; }
-  .press:active { transform: none; }
-}
+@media (prefers-reduced-motion: reduce) { .press:active { transform: none; } }
 
-/* Sidebar drawer */
-.drawer { transition: transform .32s cubic-bezier(.32, .72, 0, 1), visibility 0s linear .32s; }
-.drawer.translate-x-0 { transition: transform .32s cubic-bezier(.32, .72, 0, 1), visibility 0s; }
-@media (prefers-reduced-motion: reduce) { .drawer { transition: none; } }
+/* Bottom sheet — 21st.dev #31360 (components/ui/bottom-sheet.tsx) reads these theme hooks */
+:root {
+  --border: var(--sep); --foreground: var(--label); --muted-foreground: var(--label2);
+  --primitive-surface-elevated: var(--bg); --primitive-backdrop: rgba(0, 0, 0, 0.4);
+  --primitive-radius-surface: 14px; --primitive-z-overlay: 70;
+}
+/* It is written for Tailwind v4, where translate-* sets the `translate` property. This app is on
+   Tailwind v3, where translate-* sets `transform`, so the slide is transitioned on transform too. */
+[data-wensity-primitive] { transition-property: opacity, transform, translate, scale; }
+/* Its grab handle is bg-[var(--muted-foreground)]/35, a v4-only colour; the same colour for v3: */
+[data-wensity-primitive] span.rounded-full.w-10 { background: color-mix(in srgb, var(--muted-foreground) 35%, transparent); }
+@media (prefers-reduced-motion: reduce) { [data-wensity-primitive] { transition: none; } }
 
 
 /* The logo keeps its colours on dark backgrounds */

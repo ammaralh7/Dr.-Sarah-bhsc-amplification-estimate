@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ChevronRight, Copy, Plus, RotateCcw, Search, TriangleAlert } from "lucide-react";
-import { NavBar, NavButton, ThemeButton, Section, Tile, Group, Row, Switch, SearchField, Sheet, PriceBar, Capsule, Checkmark } from "@/components/ios";
+import { NavBar, NavButton, ThemeButton, Section, Tile, Group, Row, Switch, SearchField, Sheet, SheetPinned, PriceBar, Capsule, Checkmark } from "@/components/ios";
 import { SegmentedControl } from "@/components/ui/segmented-control";
-import { RingPill } from "@/components/ui/ring-pill";
+import { UndoPill } from "@/components/ui/undo-pill";
+import { BlurFade } from "@/components/ui/blur-fade";
 import { MODELS, ADDONS, TIERS, FEES, MFRS, STYLES, money, fits, isCros, styleAvailable, modelsFor, billingCode, quoteLines, quoteTotal, modelKey, findModel } from "@/lib/pricing";
 
 // Six questions, then the estimate. Accessories and patient details are optional extras on the estimate.
@@ -85,15 +86,15 @@ export default function Estimate({ version = 0, menu = null }) {
 
         {shown > 1 && (
           <Section id="n" sectionRef={R("n")} title="One aid or two?">
-            <SegmentedControl label="One aid or two" value={s.n ? String(s.n) : null} onChange={(v) => set({ n: +v })}
+            <SegmentedControl label="One aid or two" value={s.n ? String(s.n) : null} onValueChange={(v) => set({ n: +v })}
               options={[{ value: "1", label: "One aid" }, { value: "2", label: "Two aids" }]} />
           </Section>
         )}
 
         {shown > 2 && (
           <Section id="style" sectionRef={R("style")} title="Style">
-            <SegmentedControl label="Style" itemClassName="basis-[30%]" value={s.style}
-              onChange={(st) => set({ style: st, model: s.model != null && fits(MODELS[s.model][3], st) ? s.model : null })}
+            <SegmentedControl label="Style" value={s.style}
+              onValueChange={(st) => set({ style: st, model: s.model != null && fits(MODELS[s.model][3], st) ? s.model : null })}
               options={STYLES.map(([st]) => ({ value: st, label: st, disabled: !styleAvailable(s.mfr, st) }))} />
           </Section>
         )}
@@ -106,14 +107,14 @@ export default function Estimate({ version = 0, menu = null }) {
 
         {shown > 4 && (
           <Section id="incl" sectionRef={R("incl")} title="Included">
-            <SegmentedControl label="What's included" value={s.incl} onChange={(v) => set({ incl: v })}
+            <SegmentedControl label="What's included" value={s.incl} onValueChange={(v) => set({ incl: v })}
               options={[{ value: "all", label: "Everything", hint: `fitting + shipping` }, { value: "aid", label: "Aid only", hint: "tier price" }]} />
           </Section>
         )}
 
         {shown > 5 && (
           <Section id="molds" sectionRef={R("molds")} title="Earmolds">
-            <SegmentedControl label="Earmolds" value={s.molds == null ? null : String(s.molds)} onChange={(v) => set({ molds: +v })}
+            <SegmentedControl label="Earmolds" value={s.molds == null ? null : String(s.molds)} onValueChange={(v) => set({ molds: +v })}
               options={[{ value: "0", label: "None" }, { value: "1", label: "One", hint: "$115" }, { value: "2", label: "Two", hint: "$215" }]} />
           </Section>
         )}
@@ -125,16 +126,19 @@ export default function Estimate({ version = 0, menu = null }) {
         )}
 
         {finished && (
-          <section ref={R("estimate")} className="arrive min-w-0 scroll-mt-[calc(8.5rem+env(safe-area-inset-top,0px))] border-t border-sep pt-7">
+          <BlurFade className="min-w-0"><section ref={R("estimate")} className="min-w-0 scroll-mt-[calc(8.5rem+env(safe-area-inset-top,0px))] border-t border-sep pt-7">
             <Receipt s={s} set={set} onCopy={() => setToast((t) => t + 1)} onReset={reset} />
-          </section>
+          </section></BlurFade>
         )}
       </main>
 
       <PriceBar label={m ? `${m[0]} ${m[1]} · ${s.n === 2 ? "pair" : "one aid"}` : "Estimate"} amount={m ? money(quoteTotal(s)) : "—"}
         action={finished ? <Capsule onClick={() => jump("estimate")}>Review</Capsule> : null} />
 
-      {toast > 0 && <RingPill key={toast} label="Estimate copied" onDone={() => setToast(0)} />}
+      {/* Copy confirmation: Undo Pill (21st.dev #29941, components/ui/undo-pill.tsx); OK closes it early */}
+      <div className="pointer-events-none fixed inset-x-0 bottom-[calc(6.5rem+env(safe-area-inset-bottom,0px))] z-50 flex justify-center px-4">
+        <UndoPill open={toast > 0} label="Estimate copied" duration={4} undoLabel="OK" onUndo={() => setToast(0)} onExpire={() => setToast(0)} />
+      </div>
     </div>
   );
 }
@@ -196,8 +200,8 @@ function ModelPicker({ s, onPick }) {
         <ChevronRight className="h-5 w-5 shrink-0 text-label3" />
       </button>
       <Sheet open={open} onClose={() => { setOpen(false); setQ(""); }} title={`${s.mfr} ${s.style}`}>
-        <div className="px-4 pb-3"><SearchField inputRef={input} value={q} onChange={setQ} placeholder="Search models" /></div>
-        <div className="grid flex-1 grid-cols-1 gap-6 overflow-y-auto overscroll-contain px-4 pb-[calc(1.5rem+env(safe-area-inset-bottom,0px))]">
+        <SheetPinned><SearchField inputRef={input} value={q} onChange={setQ} placeholder="Search models" /></SheetPinned>
+        <div className="grid grid-cols-1 gap-6 pb-2">
           {cur.length > 0 && <Group header="Current price lists">{rows(cur)}</Group>}
           {old.length > 0 && <Group header="Older price lists" footer="Confirm the cost with the manufacturer before ordering.">{rows(old)}</Group>}
           {!list.length && <p className="py-10 text-center text-[15px] text-label2">No results for “{q}”</p>}
@@ -295,8 +299,8 @@ function AccessorySheet({ open, onClose, s, set }) {
   const sum = acc.filter(([nm]) => s.addons.includes(nm)).reduce((a, [, p]) => a + p, 0);
   return (
     <Sheet open={open} onClose={onClose} title="Accessories">
-      <div className="grid flex-1 grid-cols-1 gap-4 overflow-y-auto overscroll-contain px-4 pb-[calc(1.5rem+env(safe-area-inset-bottom,0px))]">
-        <Group footer={s.addons.length ? `${s.addons.length} added · ${money(sum)}` : "Tap Done when finished."}>
+      <div className="grid grid-cols-1 gap-4 pb-2">
+        <Group footer={s.addons.length ? `${s.addons.length} added · ${money(sum)}` : "Close this sheet when you're done."}>
           {acc.map(([nm, p], j) => (
             <Row key={nm} last={j === acc.length - 1}>
               <span className="min-w-0 flex-1"><span className="block truncate text-[17px]">{nm}</span><span className="tnum block text-[13px] text-label2">{money(p)}</span></span>
@@ -318,7 +322,7 @@ function AddonsStep({ s, set }) {
   return (
     <div className="grid grid-cols-1 gap-3">
       <SegmentedControl label="Add-ons" value={value}
-        onChange={(v) => (v === "none" ? set({ addons: [], addonsDone: true }) : setOpen(true))}
+        onValueChange={(v) => (v === "none" ? set({ addons: [], addonsDone: true }) : setOpen(true))}
         options={[{ value: "none", label: "None" }, { value: "add", label: "Add accessories", hint: "chargers, Roger, TV" }]} />
       {s.addons.length > 0 && (
         <button type="button" onClick={() => setOpen(true)} className="text-left text-[15px] text-label2">
