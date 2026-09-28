@@ -1,0 +1,69 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* iOS system colours (light), clinical teal tint. Dark follows the system or the sun/moon switch. */
+:root {
+  --bg: #f2f2f7; --card: #ffffff; --card2: #f2f2f7;
+  --label: #000000; --label2: rgba(60, 60, 67, 0.6); --label3: rgba(60, 60, 67, 0.3);
+  --sep: rgba(60, 60, 67, 0.29); --fill: rgba(118, 118, 128, 0.12); --fill2: rgba(120, 120, 128, 0.2);
+  --tint: #0e7c86; --tint-ink: #ffffff; --tint-soft: rgba(14, 124, 134, 0.1);
+  --warn: #fff4e0; --warn-ink: #8a4b00;
+  --material: rgba(249, 249, 249, 0.8); --thumb: #ffffff; --logo-filter: none;
+  --resound: #c8102e; --phonak: #3e8e41; --oticon: #6a2c91; --starkey: #d9600a;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --bg: #000000; --card: #1c1c1e; --card2: #2c2c2e;
+    --label: #ffffff; --label2: rgba(235, 235, 245, 0.6); --label3: rgba(235, 235, 245, 0.3);
+    --sep: rgba(84, 84, 88, 0.65); --fill: rgba(118, 118, 128, 0.24); --fill2: rgba(120, 120, 128, 0.36);
+    --tint: #40c8d2; --tint-ink: #00292c; --tint-soft: rgba(64, 200, 210, 0.16);
+    --warn: #3a2a10; --warn-ink: #ffd08a;
+    --material: rgba(28, 28, 30, 0.78); --thumb: #636366; --logo-filter: brightness(1.5) saturate(1.1);
+    --resound: #ff6378; --phonak: #72c975; --oticon: #bd92e4; --starkey: #ff9d52;
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #000000; --card: #1c1c1e; --card2: #2c2c2e;
+  --label: #ffffff; --label2: rgba(235, 235, 245, 0.6); --label3: rgba(235, 235, 245, 0.3);
+  --sep: rgba(84, 84, 88, 0.65); --fill: rgba(118, 118, 128, 0.24); --fill2: rgba(120, 120, 128, 0.36);
+  --tint: #40c8d2; --tint-ink: #00292c; --tint-soft: rgba(64, 200, 210, 0.16);
+  --warn: #3a2a10; --warn-ink: #ffd08a;
+  --material: rgba(28, 28, 30, 0.78); --thumb: #636366; --logo-filter: brightness(1.5) saturate(1.1);
+  --resound: #ff6378; --phonak: #72c975; --oticon: #bd92e4; --starkey: #ff9d52;
+}
+@layer base {
+  html { -webkit-text-size-adjust: 100%; }
+  body { background: var(--bg); color: var(--label); font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", Helvetica, Arial, sans-serif;
+    -webkit-font-smoothing: antialiased; letter-spacing: -0.01em; }
+  h1, h2, h3 { text-wrap: balance; }
+  button { -webkit-tap-highlight-color: transparent; }
+}
+.tnum { font-variant-numeric: tabular-nums; }
+.hairline { box-shadow: inset 0 -0.5px 0 var(--sep); }
+.material { background: var(--material); -webkit-backdrop-filter: saturate(180%) blur(20px); backdrop-filter: saturate(180%) blur(20px); }
+
+/* Section arrival — Blur Fade (21st.dev #1079, as in the Biladi dashboard): 6px rise + 6px blur */
+.arrive { animation: arrive .45s cubic-bezier(.22, 1, .36, 1) backwards; }
+@keyframes arrive { from { opacity: 0; transform: translateY(10px); filter: blur(6px); } }
+/* Tile press, iOS-style */
+.press { transition: transform .18s cubic-bezier(.22, 1, .36, 1), box-shadow .2s ease, background-color .2s ease; }
+.press:active { transform: scale(.97); }
+/* Bottom sheet scrim */
+.scrim-in { animation: scrimIn .25s ease-out; }
+@keyframes scrimIn { from { opacity: 0; } }
+@media (prefers-reduced-motion: reduce) {
+  .arrive, .scrim-in { animation: none !important; }
+  .press:active { transform: none; }
+}
+
+/* Sidebar drawer */
+.drawer { transition: transform .32s cubic-bezier(.32, .72, 0, 1), visibility 0s linear .32s; }
+.drawer.translate-x-0 { transition: transform .32s cubic-bezier(.32, .72, 0, 1), visibility 0s; }
+@media (prefers-reduced-motion: reduce) { .drawer { transition: none; } }
+
+
+/* The logo keeps its colours on dark backgrounds */
+.bhsc-logo { filter: var(--logo-filter); }
