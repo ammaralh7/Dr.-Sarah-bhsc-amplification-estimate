@@ -9,7 +9,9 @@ import MED from "@/data/medicaid.json";
 
 /* NY Medicaid estimate: hearing aids at the Medicaid rate (capped at $330 per aid — anything above
    was left out when the data was built), times two for a pair. Hearing aids only: no fitting, dispensing or earmold fees. */
-const MODELS = MED.models;   // [mfr, name, style label, family, rate]
+const MODELS = MED.models;   // [mfr, name, style label, family, rate, warranty ("" when the list gives none)]
+/* "3 years · $0 loss & damage deductible" -> { term: "3 years", extra: "$0 loss & damage deductible" } */
+const warrantyOf = (m) => { const [term = "", ...rest] = (m[5] || "").split(" · "); return { term, extra: rest.join(" · ") }; };
 const BRANDS = MFRS.filter(([n]) => MODELS.some((m) => m[0] === n));
 const CODES = { CIC: ["V5254", "V5258"], IIC: ["V5254", "V5258"], ITC: ["V5255", "V5259"], ITE: ["V5256", "V5260"], BTE: ["V5257", "V5261"], RIC: ["V5257", "V5261"] };
 const ORDER = ["mfr", "n", "style", "model"];
@@ -182,13 +184,16 @@ function Receipt({ s, set, onCopy, onReset }) {
   const ls = lines(s), t = total(s), billing = s.code || code(s);
   const date = new Date().toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
   const [fallback, setFallback] = useState("");
+  const w = warrantyOf(m);
+  const each = s.n === 2 ? "each aid" : "";
   const notes = [];
   if (m[0] === "ReSound") notes.push("ReSound Medicaid orders include free shipping and handling. Mention NY MEDIC when placing custom or BTE orders.");
   if (isCros(m)) notes.push("CROS/BiCROS: bill with contralateral routing codes when dispensed with a hearing aid on the same date.");
   const text = [
     "Buffalo Hearing & Speech Center — NY Medicaid amplification estimate", `Date: ${date}`,
     s.name && `Patient: ${s.name}`, s.caseNo && `Medicaid ID: ${s.caseNo}`, `Billing code: ${billing}`, "",
-    ...ls.map((l) => `${l.label} (${l.sub}): ${money(l.amount)}`), `TOTAL: ${money(t)}`,
+    ...ls.map((l) => `${l.label} (${l.sub}): ${money(l.amount)}`), `TOTAL: ${money(t)}`, "",
+    w.term ? `Warranty: ${[w.term, w.extra, each].filter(Boolean).join(", ")}` : `Warranty: not listed on the ${m[0]} Medicaid list; confirm with ${m[0]}`,
   ].filter(Boolean).join("\n");
   const copy = () => { try { navigator.clipboard.writeText(text).then(onCopy, () => setFallback(text)); } catch { setFallback(text); } };
   const field = (key, label, props = {}) => (
@@ -213,6 +218,15 @@ function Receipt({ s, set, onCopy, onReset }) {
           </Row>
         ))}
         <Row last><span className="flex-1 text-[17px] font-semibold">Total</span><span className="tnum text-[17px] font-semibold">{money(t)}</span></Row>
+      </Group>
+      <Group header="Warranty" footer={w.term ? `From the ${MED.sources[m[0]]}.` : `${m[0]}'s Medicaid list doesn't give a warranty for this model. Confirm it with ${m[0]}.`}>
+        <Row last>
+          <span className="min-w-0 flex-1">
+            <span className="block text-[17px]">Manufacturer warranty</span>
+            {(w.extra || each) && <span className="block text-[13px] text-label2">{[w.extra, each].filter(Boolean).join(" · ")}</span>}
+          </span>
+          <span className={w.term ? "shrink-0 text-[17px] font-semibold" : "shrink-0 text-[17px] text-label2"}>{w.term || "Not listed"}</span>
+        </Row>
       </Group>
       <Group header="Patient (optional, never saved)">
         {field("name", "Name", { placeholder: "Optional" })}

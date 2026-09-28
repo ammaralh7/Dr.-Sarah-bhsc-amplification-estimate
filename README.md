@@ -5,7 +5,7 @@ A hearing-aid pricing website for Dr. Sarah Alhorebi, audiologist at Buffalo Hea
 ## What it does
 
 - **Estimate:** each step opens once the one before it is answered: manufacturer, one aid or two, style, model (with search), what's included, earmolds, then add-ons. Earlier answers stay visible at the top, and a tap goes back to any of them. It ends in a receipt with the patient's name, case number and billing code, plus Copy and New patient buttons.
-- **Medicaid:** NY Medicaid prices for ReSound, Phonak and Starkey. It covers the hearing aids only, up to $330 per aid.
+- **Medicaid:** NY Medicaid prices for ReSound, Phonak and Starkey. It covers the hearing aids only, up to $330 per aid. The estimate shows each model's manufacturer warranty from its Medicaid list.
 - **Price lists** (clinic's hosted version only): load a new manufacturer price list, preview what's new or changed, and apply it. It needs the shared price storage that only the hosted version has, so a copy built from this repo hides the tab and shows the built-in prices.
 
 It has an Apple-style look in the BHSC logo blue with the Inter font, a slide-in sidebar for the tabs, and a light/dark switch. It's made for phones and iPads: no pinch or double-tap zoom, content stays clear of the iPhone notch, and nothing runs past the screen edge.
