@@ -241,7 +241,7 @@ function AddByHand({ db }) {
   return (
     <Section id="add" title="Add or update a model">
       <form className="grid min-w-0 grid-cols-1 gap-4" onSubmit={save}>
-        <SegmentedControl label="Manufacturer" value={f.mfr} onChange={(v) => setF((p) => ({ ...p, mfr: v }))} options={MFRS.map(([n]) => ({ value: n, label: n }))} itemClassName="basis-[22%] text-[14px]" />
+        <SegmentedControl label="Manufacturer" value={f.mfr} onValueChange={(v) => setF((p) => ({ ...p, mfr: v }))} options={MFRS.map(([n]) => ({ value: n, label: n }))} />
         <Group footer={tier ? `Tier ${tier} · one aid ${money(TIERS[tier][0])} · pair ${money(TIERS[tier][1])}` : "The tier is worked out from the cost."}>
           {row("model", "Model", { placeholder: "e.g. Audeo I90-R" })}
           {row("style", "Style", { placeholder: FAM_LABEL[f.fam] })}
