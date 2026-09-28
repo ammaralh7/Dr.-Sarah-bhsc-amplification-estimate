@@ -197,7 +197,7 @@ function ModelPicker({ s, onPick }) {
       </button>
       <Sheet open={open} onClose={() => { setOpen(false); setQ(""); }} title={`${s.mfr} ${s.style}`}>
         <div className="px-4 pb-3"><SearchField inputRef={input} value={q} onChange={setQ} placeholder="Search models" /></div>
-        <div className="grid flex-1 gap-6 overflow-y-auto overscroll-contain px-4 pb-[calc(1.5rem+env(safe-area-inset-bottom,0px))]">
+        <div className="grid flex-1 grid-cols-1 gap-6 overflow-y-auto overscroll-contain px-4 pb-[calc(1.5rem+env(safe-area-inset-bottom,0px))]">
           {cur.length > 0 && <Group header="Current price lists">{rows(cur)}</Group>}
           {old.length > 0 && <Group header="Older price lists" footer="Confirm the cost with the manufacturer before ordering.">{rows(old)}</Group>}
           {!list.length && <p className="py-10 text-center text-[15px] text-label2">No results for “{q}”</p>}
@@ -277,7 +277,7 @@ function Receipt({ s, set, onCopy, onReset }) {
         <Capsule variant="tinted" onClick={onReset}><RotateCcw className="h-[18px] w-[18px]" strokeWidth={2.4} />New patient</Capsule>
       </div>
       {fallback && (
-        <div className="grid gap-2">
+        <div className="grid grid-cols-1 gap-2">
           <p className="text-[13px] text-label2">Copying isn’t allowed here. Select the text below and copy it.</p>
           <textarea readOnly value={fallback} onFocus={(e) => e.target.select()} autoFocus className="h-44 w-full rounded-[12px] bg-card p-3 text-[15px] text-label outline-none" />
         </div>
@@ -295,7 +295,7 @@ function AccessorySheet({ open, onClose, s, set }) {
   const sum = acc.filter(([nm]) => s.addons.includes(nm)).reduce((a, [, p]) => a + p, 0);
   return (
     <Sheet open={open} onClose={onClose} title="Accessories">
-      <div className="grid flex-1 gap-4 overflow-y-auto overscroll-contain px-4 pb-[calc(1.5rem+env(safe-area-inset-bottom,0px))]">
+      <div className="grid flex-1 grid-cols-1 gap-4 overflow-y-auto overscroll-contain px-4 pb-[calc(1.5rem+env(safe-area-inset-bottom,0px))]">
         <Group footer={s.addons.length ? `${s.addons.length} added · ${money(sum)}` : "Tap Done when finished."}>
           {acc.map(([nm, p], j) => (
             <Row key={nm} last={j === acc.length - 1}>
@@ -316,7 +316,7 @@ function AddonsStep({ s, set }) {
   const value = !s.addonsDone ? null : s.addons.length ? "add" : "none";
   const sum = acc.filter(([nm]) => s.addons.includes(nm)).reduce((a, [, p]) => a + p, 0);
   return (
-    <div className="grid gap-3">
+    <div className="grid grid-cols-1 gap-3">
       <SegmentedControl label="Add-ons" value={value}
         onChange={(v) => (v === "none" ? set({ addons: [], addonsDone: true }) : setOpen(true))}
         options={[{ value: "none", label: "None" }, { value: "add", label: "Add accessories", hint: "chargers, Roger, TV" }]} />

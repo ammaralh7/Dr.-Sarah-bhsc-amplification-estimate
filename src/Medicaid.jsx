@@ -152,7 +152,7 @@ function Picker({ s, onPick }) {
       </button>
       <Sheet open={open} onClose={() => { setOpen(false); setQ(""); }} title={`${s.mfr} ${s.style} · Medicaid`}>
         <div className="px-4 pb-3"><SearchField inputRef={input} value={q} onChange={setQ} placeholder="Search models" /></div>
-        <div className="grid flex-1 gap-6 overflow-y-auto overscroll-contain px-4 pb-[calc(1.5rem+env(safe-area-inset-bottom,0px))]">
+        <div className="grid flex-1 grid-cols-1 gap-6 overflow-y-auto overscroll-contain px-4 pb-[calc(1.5rem+env(safe-area-inset-bottom,0px))]">
           {list.length ? (
             <Group header={MED.sources[s.mfr]} footer={`Price per aid. Models over ${money(MED.cap)} aren't listed.`}>
               {list.map(([mm, i], j) => (
@@ -223,7 +223,7 @@ function Receipt({ s, set, onCopy, onReset }) {
         <Capsule variant="tinted" onClick={onReset}><RotateCcw className="h-[18px] w-[18px]" strokeWidth={2.4} />New patient</Capsule>
       </div>
       {fallback && (
-        <div className="grid gap-2">
+        <div className="grid grid-cols-1 gap-2">
           <p className="text-[13px] text-label2">Copying isn’t allowed here. Select the text below and copy it.</p>
           <textarea readOnly value={fallback} onFocus={(e) => e.target.select()} autoFocus className="h-44 w-full rounded-[12px] bg-card p-3 text-[15px] text-label outline-none" />
         </div>

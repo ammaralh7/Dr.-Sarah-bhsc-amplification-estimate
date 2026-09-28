@@ -22,6 +22,8 @@ export default function App() {
     return () => window.removeEventListener("keydown", key);
   }, [open]);
   const go = (t) => { setTab(t); setOpen(false); window.scrollTo(0, 0); };
+  // Price lists saves to claude.ai's shared storage, so it only shows in the clinic's claude.ai version
+  const tabs = TABS.filter(([id]) => id !== "prices" || store.hosted);
 
   const menu = (
     <button type="button" onClick={() => setOpen(true)} aria-label="Show sidebar" aria-expanded={open}
@@ -49,7 +51,7 @@ export default function App() {
             <PanelLeft className="h-[22px] w-[22px]" strokeWidth={2} />
           </button>
         </div>
-        {TABS.map(([id, label, Icon]) => (
+        {tabs.map(([id, label, Icon]) => (
           <button key={id} type="button" onClick={() => go(id)} aria-current={tab === id ? "page" : undefined}
             className={cn("press flex items-center gap-3 rounded-[10px] px-3 py-3 text-[17px] font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-tint",
               tab === id ? "bg-tint-soft text-tint" : "text-label hover:bg-fill")}>
@@ -60,7 +62,7 @@ export default function App() {
 
       <div hidden={tab !== "estimate"}><Estimate version={store.version} menu={menu} /></div>
       <div hidden={tab !== "medicaid"}><Medicaid menu={menu} /></div>
-      {tab === "prices" && (
+      {tab === "prices" && store.hosted && (
         <div className="min-h-screen pb-16">
           <NavBar title="Price lists" subtitle="Upload a new list or add a model" right={<ThemeButton />} left={menu} />
           <div key="prices" className="arrive"><PriceLists store={store} sample={sample} /></div>

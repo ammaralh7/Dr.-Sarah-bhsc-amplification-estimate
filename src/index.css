@@ -2,12 +2,19 @@
 @tailwind components;
 @tailwind utilities;
 
-/* iOS system colours (light), clinical teal tint. Dark follows the system or the sun/moon switch. */
+/* Inter (variable, Latin subset), the font of 21st.dev's "Harbor Blue" theme. Bundled into the page. */
+@font-face {
+  font-family: "Inter Variable"; font-style: normal; font-display: swap; font-weight: 100 900;
+  src: url("@fontsource-variable/inter/files/inter-latin-wght-normal.woff2") format("woff2-variations");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+/* iOS system colours (light), BHSC logo blue tint. Dark follows the system or the sun/moon switch. */
 :root {
   --bg: #f2f2f7; --card: #ffffff; --card2: #f2f2f7;
   --label: #000000; --label2: rgba(60, 60, 67, 0.6); --label3: rgba(60, 60, 67, 0.3);
   --sep: rgba(60, 60, 67, 0.29); --fill: rgba(118, 118, 128, 0.12); --fill2: rgba(120, 120, 128, 0.2);
-  --tint: #0e7c86; --tint-ink: #ffffff; --tint-soft: rgba(14, 124, 134, 0.1);
+  --tint: #0082cd; --tint-ink: #ffffff; --tint-soft: rgba(0, 130, 205, 0.1);
   --warn: #fff4e0; --warn-ink: #8a4b00;
   --material: rgba(249, 249, 249, 0.8); --thumb: #ffffff; --logo-filter: none;
   --resound: #c8102e; --phonak: #3e8e41; --oticon: #6a2c91; --starkey: #d9600a;
@@ -18,7 +25,7 @@
     --bg: #000000; --card: #1c1c1e; --card2: #2c2c2e;
     --label: #ffffff; --label2: rgba(235, 235, 245, 0.6); --label3: rgba(235, 235, 245, 0.3);
     --sep: rgba(84, 84, 88, 0.65); --fill: rgba(118, 118, 128, 0.24); --fill2: rgba(120, 120, 128, 0.36);
-    --tint: #40c8d2; --tint-ink: #00292c; --tint-soft: rgba(64, 200, 210, 0.16);
+    --tint: #40aef0; --tint-ink: #00233a; --tint-soft: rgba(64, 174, 240, 0.16);
     --warn: #3a2a10; --warn-ink: #ffd08a;
     --material: rgba(28, 28, 30, 0.78); --thumb: #636366; --logo-filter: brightness(1.5) saturate(1.1);
     --resound: #ff6378; --phonak: #72c975; --oticon: #bd92e4; --starkey: #ff9d52;
@@ -29,14 +36,18 @@
   --bg: #000000; --card: #1c1c1e; --card2: #2c2c2e;
   --label: #ffffff; --label2: rgba(235, 235, 245, 0.6); --label3: rgba(235, 235, 245, 0.3);
   --sep: rgba(84, 84, 88, 0.65); --fill: rgba(118, 118, 128, 0.24); --fill2: rgba(120, 120, 128, 0.36);
-  --tint: #40c8d2; --tint-ink: #00292c; --tint-soft: rgba(64, 200, 210, 0.16);
+  --tint: #40aef0; --tint-ink: #00233a; --tint-soft: rgba(64, 174, 240, 0.16);
   --warn: #3a2a10; --warn-ink: #ffd08a;
   --material: rgba(28, 28, 30, 0.78); --thumb: #636366; --logo-filter: brightness(1.5) saturate(1.1);
   --resound: #ff6378; --phonak: #72c975; --oticon: #bd92e4; --starkey: #ff9d52;
 }
 @layer base {
-  html { -webkit-text-size-adjust: 100%; }
-  body { background: var(--bg); color: var(--label); font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  /* No double-tap zoom on phones and iPads (pinch and tap-to-zoom off; see the viewport tag) */
+  html { -webkit-text-size-adjust: 100%; touch-action: manipulation; }
+  /* Nothing ever runs past the screen edge (clip, unlike hidden, keeps the sticky bars working) */
+  html, body { overflow-x: clip; max-width: 100%; }
+  img, svg { max-width: 100%; }
+  body { background: var(--bg); color: var(--label); font-family: "Inter Variable", -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", Helvetica, Arial, sans-serif;
     -webkit-font-smoothing: antialiased; letter-spacing: -0.01em; }
   h1, h2, h3 { text-wrap: balance; }
   button { -webkit-tap-highlight-color: transparent; }
