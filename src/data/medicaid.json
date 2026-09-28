@@ -1,0 +1,568 @@
+{
+ "cap": 330.0,
+ "earmold": {
+  "ReSound": 30,
+  "Phonak": 29,
+  "Starkey": 27
+ },
+ "models": [
+  [
+   "ReSound",
+   "Sensia 5",
+   "All styles",
+   "ALL",
+   300
+  ],
+  [
+   "ReSound",
+   "Vivia 5",
+   "All styles",
+   "ALL",
+   300
+  ],
+  [
+   "ReSound",
+   "Nexia 5",
+   "All styles",
+   "ALL",
+   305
+  ],
+  [
+   "ReSound",
+   "ENZO IA 5",
+   "All styles",
+   "ALL",
+   300
+  ],
+  [
+   "ReSound",
+   "Sensia 4",
+   "All styles",
+   "ALL",
+   250
+  ],
+  [
+   "ReSound",
+   "ENZO IA 4",
+   "All styles",
+   "ALL",
+   250
+  ],
+  [
+   "ReSound",
+   "Vivia 4",
+   "All styles",
+   "ALL",
+   250
+  ],
+  [
+   "ReSound",
+   "Sensia, Vivia & Nexia CROS transmitter",
+   "All styles",
+   "ALL",
+   275
+  ],
+  [
+   "ReSound",
+   "Savi 3",
+   "All styles",
+   "ALL",
+   225
+  ],
+  [
+   "ReSound",
+   "Savi 2",
+   "All styles",
+   "ALL",
+   195
+  ],
+  [
+   "ReSound",
+   "KEY 4",
+   "All styles",
+   "ALL",
+   295
+  ],
+  [
+   "ReSound",
+   "KEY 3",
+   "All styles",
+   "ALL",
+   195
+  ],
+  [
+   "ReSound",
+   "KEY 2",
+   "All styles",
+   "ALL",
+   150
+  ],
+  [
+   "Phonak",
+   "Audeo E50-R",
+   "RIC",
+   "RIC",
+   330.0
+  ],
+  [
+   "Phonak",
+   "Audeo E30-R",
+   "RIC",
+   "RIC",
+   330.0
+  ],
+  [
+   "Phonak",
+   "Audeo I50-R",
+   "RIC",
+   "RIC",
+   330.0
+  ],
+  [
+   "Phonak",
+   "Audeo I30-R",
+   "RIC",
+   "RIC",
+   330.0
+  ],
+  [
+   "Phonak",
+   "Virto I30-R",
+   "Custom \u00b7 ITE / ITC / CIC / IIC",
+   "CUSTOM",
+   320.0
+  ],
+  [
+   "Phonak",
+   "Virto I30-10 NW O",
+   "Custom \u00b7 ITE / ITC / CIC / IIC",
+   "CUSTOM",
+   305.0
+  ],
+  [
+   "Phonak",
+   "Audeo L50-RT",
+   "RIC",
+   "RIC",
+   330.0
+  ],
+  [
+   "Phonak",
+   "Audeo L30-RT",
+   "RIC",
+   "RIC",
+   330.0
+  ],
+  [
+   "Phonak",
+   "Audeo L50-R",
+   "RIC",
+   "RIC",
+   330.0
+  ],
+  [
+   "Phonak",
+   "Audeo L30-R",
+   "RIC",
+   "RIC",
+   330.0
+  ],
+  [
+   "Phonak",
+   "Audeo L50-312",
+   "RIC",
+   "RIC",
+   330.0
+  ],
+  [
+   "Phonak",
+   "Audeo L30-312",
+   "RIC",
+   "RIC",
+   330.0
+  ],
+  [
+   "Phonak",
+   "Naida L50-PR",
+   "BTE",
+   "BTE",
+   330.0
+  ],
+  [
+   "Phonak",
+   "Naida L30-PR",
+   "BTE",
+   "BTE",
+   330.0
+  ],
+  [
+   "Phonak",
+   "Naida L50-UP",
+   "BTE",
+   "BTE",
+   330.0
+  ],
+  [
+   "Phonak",
+   "Naida L30-UP",
+   "BTE",
+   "BTE",
+   330.0
+  ],
+  [
+   "Phonak",
+   "Naida L50-SP",
+   "BTE",
+   "BTE",
+   330.0
+  ],
+  [
+   "Phonak",
+   "Naida L30-SP",
+   "BTE",
+   "BTE",
+   330.0
+  ],
+  [
+   "Phonak",
+   "Naida L50-M",
+   "BTE",
+   "BTE",
+   330.0
+  ],
+  [
+   "Phonak",
+   "Naida L30-M",
+   "BTE",
+   "BTE",
+   330.0
+  ],
+  [
+   "Phonak",
+   "Sky L70-PR",
+   "BTE",
+   "BTE",
+   330.0
+  ],
+  [
+   "Phonak",
+   "Sky L50-PR",
+   "BTE",
+   "BTE",
+   330.0
+  ],
+  [
+   "Phonak",
+   "Sky L70-UP",
+   "BTE",
+   "BTE",
+   330.0
+  ],
+  [
+   "Phonak",
+   "Sky L50-UP",
+   "BTE",
+   "BTE",
+   330.0
+  ],
+  [
+   "Phonak",
+   "Sky L70-SP",
+   "BTE",
+   "BTE",
+   330.0
+  ],
+  [
+   "Phonak",
+   "Sky L50-SP",
+   "BTE",
+   "BTE",
+   330.0
+  ],
+  [
+   "Phonak",
+   "Sky L70-M",
+   "BTE",
+   "BTE",
+   330.0
+  ],
+  [
+   "Phonak",
+   "Sky L50-M",
+   "BTE",
+   "BTE",
+   330.0
+  ],
+  [
+   "Phonak",
+   "Virto P50-312",
+   "Custom \u00b7 ITE / ITC / CIC / IIC",
+   "CUSTOM",
+   305.0
+  ],
+  [
+   "Phonak",
+   "Virto P30-312",
+   "Custom \u00b7 ITE / ITC / CIC / IIC",
+   "CUSTOM",
+   305.0
+  ],
+  [
+   "Phonak",
+   "Virto P50-312 NW O",
+   "Custom \u00b7 ITE / ITC / CIC / IIC",
+   "CUSTOM",
+   305.0
+  ],
+  [
+   "Phonak",
+   "Virto P30-312 NW O",
+   "Custom \u00b7 ITE / ITC / CIC / IIC",
+   "CUSTOM",
+   305.0
+  ],
+  [
+   "Phonak",
+   "Naida Link M",
+   "BTE",
+   "BTE",
+   330.0
+  ],
+  [
+   "Phonak",
+   "Sky Link M",
+   "BTE",
+   "BTE",
+   330.0
+  ],
+  [
+   "Phonak",
+   "CROS P-13",
+   "CROS \u00b7 BTE",
+   "BTE",
+   330.0
+  ],
+  [
+   "Phonak",
+   "CROS E-R",
+   "CROS \u00b7 RIC",
+   "RIC",
+   330.0
+  ],
+  [
+   "Phonak",
+   "CROS I-R",
+   "CROS \u00b7 RIC",
+   "RIC",
+   330.0
+  ],
+  [
+   "Phonak",
+   "CROS L-R",
+   "CROS \u00b7 RIC",
+   "RIC",
+   330.0
+  ],
+  [
+   "Starkey",
+   "Omega AI 16",
+   "RIC \u00b7 rechargeable",
+   "RIC",
+   330.0
+  ],
+  [
+   "Starkey",
+   "Omega AI 16",
+   "RIC \u00b7 312 battery",
+   "RIC",
+   330.0
+  ],
+  [
+   "Starkey",
+   "Omega AI 16",
+   "mini RIC \u00b7 rechargeable",
+   "RIC",
+   330.0
+  ],
+  [
+   "Starkey",
+   "Omega AI 16",
+   "CIC \u00b7 312 battery",
+   "CIC",
+   330.0
+  ],
+  [
+   "Starkey",
+   "Omega AI CROS/BiCROS",
+   "RIC \u00b7 312 battery",
+   "RIC",
+   242.0
+  ],
+  [
+   "Starkey",
+   "G Series AI 16",
+   "BTE \u00b7 13 battery",
+   "BTE",
+   330.0
+  ],
+  [
+   "Starkey",
+   "G Series AI 16",
+   "BTE \u00b7 13 battery \u00b7 Power Plus",
+   "BTE",
+   330.0
+  ],
+  [
+   "Starkey",
+   "G Series AI 12",
+   "RIC \u00b7 rechargeable",
+   "RIC",
+   330.0
+  ],
+  [
+   "Starkey",
+   "G Series AI 12",
+   "RIC \u00b7 312 battery",
+   "RIC",
+   330.0
+  ],
+  [
+   "Starkey",
+   "G Series AI 12",
+   "BTE \u00b7 13 battery",
+   "BTE",
+   330.0
+  ],
+  [
+   "Starkey",
+   "G Series AI 12",
+   "BTE \u00b7 13 battery \u00b7 Power Plus",
+   "BTE",
+   330.0
+  ],
+  [
+   "Starkey",
+   "G Series AI 10",
+   "RIC \u00b7 rechargeable",
+   "RIC",
+   330.0
+  ],
+  [
+   "Starkey",
+   "G Series AI 10",
+   "RIC \u00b7 312 battery",
+   "RIC",
+   305.0
+  ],
+  [
+   "Starkey",
+   "G Series AI 10",
+   "BTE \u00b7 13 battery",
+   "BTE",
+   305.0
+  ],
+  [
+   "Starkey",
+   "G Series AI 10",
+   "BTE \u00b7 13 battery \u00b7 Power Plus",
+   "BTE",
+   305.0
+  ],
+  [
+   "Starkey",
+   "Genesis AI 12",
+   "CIC \u00b7 312 battery",
+   "CIC",
+   305.0
+  ],
+  [
+   "Starkey",
+   "Genesis AI 12",
+   "ITC \u00b7 rechargeable",
+   "ITC",
+   330.0
+  ],
+  [
+   "Starkey",
+   "Genesis AI 12",
+   "Half shell \u00b7 rechargeable",
+   "ITE",
+   330.0
+  ],
+  [
+   "Starkey",
+   "Genesis AI 12",
+   "ITE \u00b7 rechargeable",
+   "ITE",
+   330.0
+  ],
+  [
+   "Starkey",
+   "Genesis AI 12 NW",
+   "CIC \u00b7 10 battery",
+   "CIC",
+   305.0
+  ],
+  [
+   "Starkey",
+   "Evolv AI 1200",
+   "BTE \u00b7 rechargeable",
+   "BTE",
+   330.0
+  ],
+  [
+   "Starkey",
+   "Evolv AI 1200",
+   "ITC \u00b7 rechargeable",
+   "ITC",
+   330.0
+  ],
+  [
+   "Starkey",
+   "Evolv AI 1200",
+   "Half shell \u00b7 rechargeable",
+   "ITE",
+   330.0
+  ],
+  [
+   "Starkey",
+   "Evolv AI 1200",
+   "ITE \u00b7 rechargeable",
+   "ITE",
+   330.0
+  ],
+  [
+   "Starkey",
+   "Evolv AI 1000",
+   "BTE \u00b7 rechargeable",
+   "BTE",
+   330.0
+  ],
+  [
+   "Starkey",
+   "Evolv AI 1000",
+   "ITC \u00b7 rechargeable",
+   "ITC",
+   330.0
+  ],
+  [
+   "Starkey",
+   "Evolv AI 1000",
+   "Half shell \u00b7 rechargeable",
+   "ITE",
+   330.0
+  ],
+  [
+   "Starkey",
+   "Evolv AI 1000",
+   "ITE \u00b7 rechargeable",
+   "ITE",
+   330.0
+  ]
+ ],
+ "sources": {
+  "ReSound": "ReSound NY Medicaid & Rehab 2026",
+  "Phonak": "Phonak NY Medicaid, effective Aug 24 2026",
+  "Starkey": "Starkey NY State Medicaid agreement, Sep 3 2026"
+ }
+}
