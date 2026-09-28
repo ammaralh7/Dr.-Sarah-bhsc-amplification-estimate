@@ -4,12 +4,14 @@ import { useEffect, useState } from "react";
 import { applyUpdates } from "@/lib/pricing";
 
 export function usePriceStore() {
-  const [state, setState] = useState({ db: null, docs: [], version: 0, canWrite: null, ready: false });
+  // hosted: running on the web host, where the shared storage exists (false on GitHub Pages or a local copy)
+  const [state, setState] = useState({ db: null, docs: [], version: 0, canWrite: null, ready: false, hosted: false });
   useEffect(() => {
     let unsub = null, dead = false;
     (async () => {
       const app = typeof window !== "undefined" ? window.app : null;
       if (!app || typeof app.use !== "function") { setState((s) => ({ ...s, ready: true })); return; }
+      setState((s) => ({ ...s, hosted: true }));
       const [db, user] = await Promise.all([app.use("db"), app.use("user")]);
       if (dead) return;
       let canWrite = null;
@@ -19,7 +21,7 @@ export function usePriceStore() {
         (snap) => {
           const docs = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
           applyUpdates(docs);
-          setState((s) => ({ db, docs, version: s.version + 1, canWrite, ready: true }));
+          setState((s) => ({ ...s, db, docs, version: s.version + 1, canWrite, ready: true }));
         },
         () => setState((s) => ({ ...s, db: null, ready: true })),
       );
