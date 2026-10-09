@@ -4,8 +4,8 @@ A hearing-aid pricing website for Dr. Sarah Alhorebi, audiologist at Buffalo Hea
 
 ## What it does
 
-- **Estimate:** the whole order on one page, every question a dropdown: one aid or two, then manufacturer, style and model, what's included, earmolds and accessories. When the two ears get different hearing aids, the order splits into a **Right ear** and a **Left ear** card, side by side on a computer. The estimate updates live next to the order, with the patient's name, case number, billing code and *Copy estimate*.
-  - **Accessories:** BHSC cost × 1.2. Any accessory can be typed in with its cost.
+- **Estimate:** the whole order on one page, one tap per answer: one aid or two, then manufacturer and style (buttons) and model (a search box), what's included, earmolds and accessories. When the two ears get different hearing aids, the order splits into a **Right ear** and a **Left ear** card, side by side on a computer. The estimate updates live next to the order, with case number, billing code, notes and *Copy estimate*.
+  - **Accessories:** each with its patient price, and any other accessory can be added by hand.
   - **Refund if returned:** works out the refund from BHSC's return policy. BHSC keeps 5% of the hearing aid charge and 5% of the fitting charge, plus a $200 (one aid) or $300 (two aids) service fee. Returning one side of a pair has no penalty.
   - **CROS/BiCROS:** priced as a one-aid CROS plus a one-aid hearing aid, as the 2026 tier pricing says.
 - **Compare prices:** up to four hearing aids side by side for one patient, with the cheapest marked and how much more the others cost. *Use in estimate* opens the Estimate with the one the patient picks.

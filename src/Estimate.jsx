@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Copy, MinusCircle, Plus, RotateCcw, TriangleAlert } from "lucide-react";
-import { NavBar, NavButton, ThemeButton, Group, Row, Switch, Sheet, PriceBar, Capsule, SelectRow, FieldRow } from "@/components/ios";
+import { NavBar, NavButton, ThemeButton, Group, Row, Switch, Sheet, PriceBar, Capsule, ChoiceRow, FieldRow } from "@/components/ios";
 import { SegmentedControl } from "@/components/ui/segmented-control";
 import { UndoPill } from "@/components/ui/undo-pill";
 import { EarOrder, blankEar } from "@/components/order";
@@ -11,7 +11,7 @@ import {
 } from "@/lib/pricing";
 
 // One page: the whole order is dropdowns; the estimate below updates as it is filled in.
-const blank = () => ({ n: null, same: true, ears: [blankEar(), blankEar()], incl: "all", molds: 0, addons: [], name: "", caseNo: "", code: "" });
+const blank = () => ({ n: null, same: true, ears: [blankEar(), blankEar()], incl: "all", molds: 0, addons: [], notes: "", caseNo: "", code: "" });
 
 export default function Estimate({ menu = null, seed = null }) {
   const [s, setS] = useState(blank);
@@ -45,10 +45,8 @@ export default function Estimate({ menu = null, seed = null }) {
           (Right | Left ear side by side when they differ), accessories, then the estimate and refund. */}
       <main className="mx-auto grid max-w-2xl grid-cols-1 gap-7 px-4 pt-4 lg:max-w-6xl lg:grid-cols-2 lg:items-start lg:gap-x-8">
         <Group header="Order">
-          <SelectRow label="Hearing aids" value={s.n} onChange={(v) => set({ n: +v, code: "" })} last={s.n !== 2}>
-            <option value="1">One aid</option>
-            <option value="2">Two aids</option>
-          </SelectRow>
+          <ChoiceRow label="Hearing aids" value={s.n} onChange={(v) => set({ n: +v, code: "" })} last={s.n !== 2}
+            options={[{ value: 1, label: "One aid" }, { value: 2, label: "Two aids" }]} />
           {s.n === 2 && (
             <Row last>
               <span className="flex-1 text-[17px]">Same aid in both ears</span>
@@ -58,16 +56,11 @@ export default function Estimate({ menu = null, seed = null }) {
           )}
         </Group>
 
-        <Group header="Options">
-          <SelectRow label="Included" value={s.incl} onChange={(v) => set({ incl: v })}>
-            <option value="all">Everything (fitting + shipping)</option>
-            <option value="aid">Aid only</option>
-          </SelectRow>
-          <SelectRow label="Earmolds" value={s.molds} onChange={(v) => set({ molds: +v })} last>
-            <option value="0">None</option>
-            <option value="1">One · {money(FEES.molds[1])}</option>
-            <option value="2">Two · {money(FEES.molds[2])}</option>
-          </SelectRow>
+        <Group header="Options" footer="Everything adds fitting, orientation & dispense and shipping.">
+          <ChoiceRow label="Included" value={s.incl} onChange={(v) => set({ incl: v })}
+            options={[{ value: "all", label: "Everything" }, { value: "aid", label: "Aid only" }]} />
+          <ChoiceRow label="Earmolds" value={s.molds} onChange={(v) => set({ molds: +v })} last
+            options={[{ value: 0, label: "None" }, { value: 1, label: `One · ${money(FEES.molds[1])}` }, { value: 2, label: `Two · ${money(FEES.molds[2])}` }]} />
         </Group>
 
         {twoEars ? (
@@ -80,7 +73,7 @@ export default function Estimate({ menu = null, seed = null }) {
           </div>
         )}
 
-        <Group header="Accessories" footer="Patient price is BHSC cost × 1.2." className="min-w-0 lg:col-span-2">
+        <Group header="Accessories" footer="Prices shown are patient prices." className="min-w-0 lg:col-span-2">
           {s.addons.map((a) => (
             <Row key={a.name}>
               <button type="button" aria-label={`Remove ${a.name}`} onClick={() => set({ addons: s.addons.filter((x) => x.name !== a.name) })}
@@ -132,17 +125,17 @@ function Receipt({ s, set, onCopy, onReset }) {
   const code = s.code || billingCode(s);
   const date = new Date().toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
   const [fallback, setFallback] = useState("");
-  const notes = [];
-  if (crosPair(s)) notes.push("CROS/BiCROS — priced as a one-aid CROS plus a one-aid hearing aid, per the 2026 tier pricing.");
-  else if (mixed(s) && !MIXED_CONFIRMED) notes.push("Different aid in each ear — mixed-pair pricing isn’t confirmed yet. Check the total before quoting.");
-  if (s.n === 2 && !mixed(s) && ms.some(isCros)) notes.push("A CROS transmitter goes on one ear. For a CROS/BiCROS, turn off “Same aid in both ears” and choose the hearing aid for the other ear.");
-  if (ms.some((m) => m[5])) notes.push("Older price list — confirm the cost with the manufacturer before ordering.");
-  if (ms.some((m) => m[6])) notes.push("NY SHIP program — SHIP includes free shipping, so check whether the $25 applies.");
-  if (ms.some(isCros)) notes.push("CROS/BiCROS — bill with contralateral routing codes when dispensed with a hearing aid on the same date.");
+  const warnings = [];
+  if (crosPair(s)) warnings.push("CROS/BiCROS — priced as a one-aid CROS plus a one-aid hearing aid, per the 2026 tier pricing.");
+  else if (mixed(s) && !MIXED_CONFIRMED) warnings.push("Different aid in each ear — mixed-pair pricing isn’t confirmed yet. Check the total before quoting.");
+  if (s.n === 2 && !mixed(s) && ms.some(isCros)) warnings.push("A CROS transmitter goes on one ear. For a CROS/BiCROS, turn off “Same aid in both ears” and choose the hearing aid for the other ear.");
+  if (ms.some((m) => m[5])) warnings.push("Older price list — confirm the cost with the manufacturer before ordering.");
+  if (ms.some((m) => m[6])) warnings.push("NY SHIP program — SHIP includes free shipping, so check whether the $25 applies.");
+  if (ms.some(isCros)) warnings.push("CROS/BiCROS — bill with contralateral routing codes when dispensed with a hearing aid on the same date.");
   const what = s.n === 2 ? (mixed(s) ? "Two aids, one per ear" : "Pair") : "One aid";
   const text = [
     "Buffalo Hearing & Speech Center — amplification estimate", `Date: ${date}`,
-    s.name ? `Patient: ${s.name}` : null, s.caseNo ? `Case #: ${s.caseNo}` : null, `Billing code: ${code}`, "",
+    s.caseNo ? `Case #: ${s.caseNo}` : null, `Billing code: ${code}`, s.notes.trim() ? `Notes: ${s.notes.trim()}` : null, "",
     ...lines.map((l) => `${l.label}${l.sub ? ` (${l.sub})` : ""}: ${money(l.amount)}`),
     `TOTAL: ${money(total)}`, "", "Includes up to 4 follow-up visits in the first year.",
   ].filter((x) => x != null).join("\n");
@@ -169,13 +162,19 @@ function Receipt({ s, set, onCopy, onReset }) {
         </Row>
       </Group>
 
-      <Group header="Patient (optional, never saved)" footer={`Includes up to 4 follow-up visits in the first year.${ms.some((m) => m[4] >= 7) ? " LACE AI included." : ""}`}>
-        <FieldRow label="Name" value={s.name} onChange={(v) => set({ name: v })} placeholder="Optional" />
+      <Group header="Notes & billing (never saved)" footer="Includes up to 4 follow-up visits in the first year.">
         <FieldRow label="Case #" value={s.caseNo} onChange={(v) => set({ caseNo: v })} placeholder="Optional" inputMode="numeric" />
-        <FieldRow label="Billing code" value={code} onChange={(v) => set({ code: v })} last />
+        <FieldRow label="Billing code" value={code} onChange={(v) => set({ code: v })} />
+        <div className="bg-card pl-4">
+          <div className="flex min-w-0 items-start gap-3 py-2.5 pr-4">
+            <label htmlFor="estimate-notes" className="w-[7.5rem] shrink-0 text-[17px] leading-snug">Notes</label>
+            <textarea id="estimate-notes" value={s.notes} onChange={(e) => set({ notes: e.target.value })} placeholder="Optional" rows={3}
+              className="min-h-[4.5rem] w-0 min-w-0 flex-1 resize-y bg-transparent text-[17px] leading-snug text-label outline-none [field-sizing:content] placeholder:text-label3" />
+          </div>
+        </div>
       </Group>
 
-      {notes.map((n) => (
+      {warnings.map((n) => (
         <div key={n} className="flex gap-2.5 rounded-[12px] bg-warn px-4 py-3 text-[15px] text-warn-ink"><TriangleAlert className="mt-0.5 h-[18px] w-[18px] shrink-0" />{n}</div>
       ))}
 

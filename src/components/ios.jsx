@@ -2,7 +2,7 @@
    Guidelines: large-title navigation bar, selection tiles (Apple Store configurator),
    bottom sheet, grouped inset lists, switches, search field and the frosted price bar. */
 import { useEffect, useId, useState } from "react";
-import { Check, ChevronsUpDown, Moon, Search, Sun, X } from "lucide-react";
+import { Check, Moon, Search, Sun, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { BlurFade } from "@/components/ui/blur-fade";
 import { Drawer, DrawerContent } from "@/components/ui/bottom-sheet";
@@ -112,38 +112,22 @@ export function Row({ children, className, last, as: As = "div", ...props }) {
   );
 }
 
-/* ── Dropdown row: a native <select> inside a list row, so iPhone/iPad show their own wheel picker ── */
-export function SelectRow({ label, value, onChange, placeholder = "Choose", disabled, last, stacked, children }) {
-  const id = useId();
-  const empty = value == null || value === "";
-  // stacked: small label above a full-width dropdown, for narrow columns (Compare prices)
-  if (stacked) return (
-    <Row last={last} className={disabled ? "opacity-40" : ""}>
-      <span className="flex min-w-0 flex-1 flex-col">
-        <label htmlFor={id} className="text-[13px] text-label2">{label}</label>
-        <span className="relative flex min-w-0 items-center">
-          <select id={id} value={empty ? "" : String(value)} disabled={disabled} onChange={(e) => onChange(e.target.value)}
-            className={cn("w-0 min-w-0 flex-1 cursor-pointer appearance-none truncate rounded-[6px] bg-transparent py-0.5 pr-6 text-[17px] outline-none focus-visible:ring-2 focus-visible:ring-tint disabled:cursor-not-allowed",
-              empty ? "text-label3" : "text-label")}>
-            <option value="" disabled>{placeholder}</option>
-            {children}
-          </select>
-          <ChevronsUpDown className="pointer-events-none absolute right-0 h-4 w-4 text-label3" strokeWidth={2.2} />
-        </span>
-      </span>
-    </Row>
-  );
+/* ── Choice row: label on the left, small buttons on the right (one can be picked) ── */
+export function ChoiceRow({ label, value, options, onChange, last }) {
   return (
-    <Row last={last} className={disabled ? "opacity-40" : ""}>
-      <label htmlFor={id} className="w-[7.5rem] shrink-0 text-[17px]">{label}</label>
-      <span className="relative flex min-w-0 flex-1 items-center">
-        <select id={id} value={empty ? "" : String(value)} disabled={disabled} onChange={(e) => onChange(e.target.value)}
-          className={cn("w-0 min-w-0 flex-1 cursor-pointer appearance-none truncate rounded-[6px] bg-transparent py-1 pr-6 text-right text-[17px] outline-none [text-align-last:right] focus-visible:ring-2 focus-visible:ring-tint disabled:cursor-not-allowed",
-            empty ? "text-label3" : "text-label2")}>
-          <option value="" disabled>{placeholder}</option>
-          {children}
-        </select>
-        <ChevronsUpDown className="pointer-events-none absolute right-0 h-4 w-4 text-label3" strokeWidth={2.2} />
+    <Row last={last}>
+      <span className="w-[7.5rem] shrink-0 text-[17px]">{label}</span>
+      <span role="radiogroup" aria-label={label} className="flex min-w-0 flex-1 flex-wrap justify-end gap-1.5">
+        {options.map((o) => {
+          const on = String(value) === String(o.value);
+          return (
+            <button key={o.value} type="button" role="radio" aria-checked={on} onClick={() => onChange(o.value)}
+              className={cn("press h-9 rounded-[8px] px-3 text-[15px] font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-tint",
+                on ? "bg-tint-soft text-tint shadow-[inset_0_0_0_2px_var(--tint)]" : "bg-fill text-label hover:bg-fill2")}>
+              {o.label}
+            </button>
+          );
+        })}
       </span>
     </Row>
   );
