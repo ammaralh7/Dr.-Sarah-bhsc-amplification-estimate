@@ -80,7 +80,7 @@ export default function Compare({ menu = null, onUse }) {
                   )}
                 </div>
 
-                <EarOrder stacked e={e} k={k} onChange={(patch) => setOpt(i, patch)} />
+                <EarOrder compact e={e} k={k} onChange={(patch) => setOpt(i, patch)} />
 
                 {m ? (
                   <div className="grid gap-3">

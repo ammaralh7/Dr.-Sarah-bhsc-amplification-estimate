@@ -206,10 +206,10 @@ export function SheetPinned({ children }) {
 }
 
 /* ── Frosted price bar (Apple Store bag bar) ── */
-export function PriceBar({ label, amount, action, className }) {
+export function PriceBar({ label, amount, action, className, wide }) {
   return (
     <div className={cn("material fixed bottom-0 inset-x-0 z-30 shadow-[0_-0.5px_0_var(--sep)]", className)} style={{ paddingBottom: "env(safe-area-inset-bottom, 0px)" }}>
-      <div className="mx-auto flex max-w-2xl items-center justify-between gap-3 px-4 py-3">
+      <div className={cn("mx-auto flex max-w-2xl items-center justify-between gap-3 px-4 py-3", wide && "lg:max-w-6xl")}>
         <div className="min-w-0">
           <div className="truncate text-[13px] text-label2">{label}</div>
           <div className="tnum text-[22px] font-semibold leading-tight tracking-[-0.02em]">{amount}</div>

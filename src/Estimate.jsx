@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Copy, MinusCircle, Plus, RotateCcw, TriangleAlert } from "lucide-react";
 import { NavBar, NavButton, ThemeButton, Group, Row, Switch, Sheet, PriceBar, Capsule, SelectRow, FieldRow } from "@/components/ios";
 import { SegmentedControl } from "@/components/ui/segmented-control";
@@ -17,6 +17,7 @@ export default function Estimate({ menu = null, seed = null }) {
   const [s, setS] = useState(blank);
   const [toast, setToast] = useState(0);
   const [accOpen, setAccOpen] = useState(false);
+  const estimateRef = useRef(null);
   const set = (patch) => setS((p) => ({ ...p, ...patch }));
   const setEar = (i, patch) => setS((p) => ({ ...p, code: "", ears: p.ears.map((e, j) => (j === i ? { ...e, ...patch } : e)) }));
 
@@ -34,93 +35,90 @@ export default function Estimate({ menu = null, seed = null }) {
   const twoEars = mixed(s);
   const accList = accessoriesFor(s);
 
-  const extras = (
-    <>
-      <Group header="Options">
-        <SelectRow label="Included" value={s.incl} onChange={(v) => set({ incl: v })}>
-          <option value="all">Everything (fitting + shipping)</option>
-          <option value="aid">Aid only</option>
-        </SelectRow>
-        <SelectRow label="Earmolds" value={s.molds} onChange={(v) => set({ molds: +v })} last>
-          <option value="0">None</option>
-          <option value="1">One · {money(FEES.molds[1])}</option>
-          <option value="2">Two · {money(FEES.molds[2])}</option>
-        </SelectRow>
-      </Group>
-
-      <Group header="Accessories" footer="Patient price is BHSC cost × 1.2.">
-        {s.addons.map((a, j) => (
-          <Row key={a.name}>
-            <button type="button" aria-label={`Remove ${a.name}`} onClick={() => set({ addons: s.addons.filter((x) => x.name !== a.name) })}
-              className="press -ml-1 shrink-0 rounded-full text-[#ff3b30] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-tint">
-              <MinusCircle className="h-[22px] w-[22px]" strokeWidth={2} />
-            </button>
-            <span className="min-w-0 flex-1 truncate text-[17px]">{a.name}</span>
-            <span className="tnum shrink-0 text-[17px] text-label2">{money(a.price)}</span>
-          </Row>
-        ))}
-        <Row as="button" type="button" last onClick={() => setAccOpen(true)} className="active:bg-fill">
-          <Plus className="h-5 w-5 shrink-0 text-tint" strokeWidth={2.4} />
-          <span className="flex-1 text-[17px] text-tint">Add accessory</span>
-        </Row>
-      </Group>
-    </>
-  );
-
   return (
-    <div className="min-h-screen pb-36 lg:pb-16">
+    <div className="min-h-screen pb-36">
       <NavBar wide title="Amplification Estimate" shortTitle="Estimate" subtitle="Buffalo Hearing & Speech Center"
         left={<>{menu}<NavButton onClick={reset}><RotateCcw className="h-[18px] w-[18px]" strokeWidth={2.4} />New</NavButton></>}
         right={<ThemeButton />} />
 
-      <main className="mx-auto grid max-w-2xl grid-cols-1 gap-7 px-4 pt-4 lg:max-w-6xl lg:grid-cols-2 lg:items-start lg:gap-x-10">
-        {/* Different aids: the Right / Left ear cards sit side by side across the page on a computer. */}
-        <div className={cn("grid min-w-0 grid-cols-1 gap-7", twoEars && "lg:col-span-2")}>
-        <div className={cn(twoEars && "lg:w-[calc(50%-1.25rem)]")}>
-          <Group header="Order">
-            <SelectRow label="Hearing aids" value={s.n} onChange={(v) => set({ n: +v, code: "" })} last={s.n !== 2}>
-              <option value="1">One aid</option>
-              <option value="2">Two aids</option>
-            </SelectRow>
-            {s.n === 2 && (
-              <Row last>
-                <span className="flex-1 text-[17px]">Same aid in both ears</span>
-                <Switch label="Same aid in both ears" checked={s.same}
-                  onChange={(on) => setS((p) => ({ ...p, same: on, code: "", ears: on ? p.ears : [p.ears[0], { ...p.ears[0] }] }))} />
-              </Row>
-            )}
-          </Group>
-        </div>
+      {/* Laid out for a computer, top to bottom at full width: order and options, the hearing aid(s)
+          (Right | Left ear side by side when they differ), accessories, then the estimate and refund. */}
+      <main className="mx-auto grid max-w-2xl grid-cols-1 gap-7 px-4 pt-4 lg:max-w-6xl lg:grid-cols-2 lg:items-start lg:gap-x-8">
+        <Group header="Order">
+          <SelectRow label="Hearing aids" value={s.n} onChange={(v) => set({ n: +v, code: "" })} last={s.n !== 2}>
+            <option value="1">One aid</option>
+            <option value="2">Two aids</option>
+          </SelectRow>
+          {s.n === 2 && (
+            <Row last>
+              <span className="flex-1 text-[17px]">Same aid in both ears</span>
+              <Switch label="Same aid in both ears" checked={s.same}
+                onChange={(on) => setS((p) => ({ ...p, same: on, code: "", ears: on ? p.ears : [p.ears[0], { ...p.ears[0] }] }))} />
+            </Row>
+          )}
+        </Group>
+
+        <Group header="Options">
+          <SelectRow label="Included" value={s.incl} onChange={(v) => set({ incl: v })}>
+            <option value="all">Everything (fitting + shipping)</option>
+            <option value="aid">Aid only</option>
+          </SelectRow>
+          <SelectRow label="Earmolds" value={s.molds} onChange={(v) => set({ molds: +v })} last>
+            <option value="0">None</option>
+            <option value="1">One · {money(FEES.molds[1])}</option>
+            <option value="2">Two · {money(FEES.molds[2])}</option>
+          </SelectRow>
+        </Group>
+
         {twoEars ? (
-          <div className="grid grid-cols-1 gap-7 lg:grid-cols-2 lg:gap-10">
+          <div className="grid min-w-0 grid-cols-1 gap-7 lg:col-span-2 lg:grid-cols-2 lg:gap-8">
             {[0, 1].map((i) => <EarOrder key={i} side={i} title={EAR_NAMES[i]} e={s.ears[i]} k={null} onChange={(patch) => setEar(i, patch)} />)}
           </div>
         ) : (
-          <EarOrder title={s.n === 2 ? "Hearing aids · both ears" : "Hearing aid"} e={s.ears[0]} k={k} onChange={(patch) => setEar(0, patch)} />
+          <div className="min-w-0 lg:col-span-2">
+            <EarOrder title={s.n === 2 ? "Hearing aids · both ears" : "Hearing aid"} e={s.ears[0]} k={k} onChange={(patch) => setEar(0, patch)} />
+          </div>
         )}
-        {!twoEars && extras}
-       </div>
-       {twoEars && <div className="grid min-w-0 grid-cols-1 gap-7">{extras}</div>}
-        <section className="grid min-w-0 grid-cols-1 gap-10 border-t border-sep pt-7 lg:border-t-0 lg:pt-0">
+
+        <Group header="Accessories" footer="Patient price is BHSC cost × 1.2." className="min-w-0 lg:col-span-2">
+          {s.addons.map((a) => (
+            <Row key={a.name}>
+              <button type="button" aria-label={`Remove ${a.name}`} onClick={() => set({ addons: s.addons.filter((x) => x.name !== a.name) })}
+                className="press -ml-1 shrink-0 rounded-full text-[#ff3b30] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-tint">
+                <MinusCircle className="h-[22px] w-[22px]" strokeWidth={2} />
+              </button>
+              <span className="min-w-0 flex-1 truncate text-[17px]">{a.name}</span>
+              <span className="tnum shrink-0 text-[17px] text-label2">{money(a.price)}</span>
+            </Row>
+          ))}
+          <Row as="button" type="button" last onClick={() => setAccOpen(true)} className="hover:bg-fill">
+            <Plus className="h-5 w-5 shrink-0 text-tint" strokeWidth={2.4} />
+            <span className="flex-1 text-[17px] text-tint">Add accessory</span>
+          </Row>
+        </Group>
+
+        <section ref={estimateRef} aria-label="Estimate and refund"
+          className="grid min-w-0 scroll-mt-[calc(4rem+env(safe-area-inset-top,0px))] grid-cols-1 gap-10 border-t border-sep pt-7 lg:col-span-2 lg:grid-cols-2 lg:items-start lg:gap-8">
           {ready ? (
             <>
               <Receipt s={s} set={set} onCopy={() => setToast((t) => t + 1)} onReset={reset} />
               <Refund s={s} />
             </>
           ) : (
-            <p className="rounded-[12px] bg-card px-4 py-6 text-center text-[15px] text-label2">
-              {!s.n ? "Choose one aid or two, then the model, to see the estimate." : twoEars ? "Choose a model for each ear to see the estimate." : "Choose the model to see the estimate."}
+            <p className="rounded-[12px] bg-card px-4 py-6 text-center text-[15px] text-label2 lg:col-span-2">
+              {!s.n ? "Choose one aid or two, then the hearing aid, to see the estimate and refund." : twoEars ? "Choose a hearing aid for each ear to see the estimate and refund." : "Choose the hearing aid to see the estimate and refund."}
             </p>
           )}
         </section>
       </main>
 
-      <PriceBar className="lg:hidden" label={names.length ? `${names.join(" + ")} · ${s.n === 2 ? (twoEars ? "two aids" : "pair") : "one aid"}` : "Estimate"}
-        amount={ready ? money(quoteTotal(s)) : "—"} />
+      <PriceBar wide label={names.length ? `${names.join(" + ")} · ${s.n === 2 ? (twoEars ? "two aids" : "pair") : "one aid"}` : "Estimate"}
+        amount={ready ? money(quoteTotal(s)) : "—"}
+        action={ready ? <Capsule onClick={() => estimateRef.current?.scrollIntoView({ behavior: "smooth", block: "start" })}>Review</Capsule> : null} />
 
       <AccessorySheet open={accOpen} onClose={() => setAccOpen(false)} s={s} set={set} list={accList} mfrs={orderMfrs(s)} />
       {/* Copy confirmation: Undo Pill (21st.dev #29941, components/ui/undo-pill.tsx); OK closes it early */}
-      <div className="pointer-events-none fixed inset-x-0 bottom-[calc(6.5rem+env(safe-area-inset-bottom,0px))] z-50 flex justify-center px-4 lg:bottom-8">
+      <div className="pointer-events-none fixed inset-x-0 bottom-[calc(6.5rem+env(safe-area-inset-bottom,0px))] z-50 flex justify-center px-4">
         <UndoPill open={toast > 0} label="Estimate copied" duration={4} undoLabel="OK" onUndo={() => setToast(0)} onExpire={() => setToast(0)} />
       </div>
     </div>
