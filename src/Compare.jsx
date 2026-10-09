@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { ArrowRight, Copy, Plus, RotateCcw, X } from "lucide-react";
-import { NavBar, NavButton, ThemeButton, Group, Row, Capsule, ChoiceRow } from "@/components/ios";
+import { NavBar, NavButton, ThemeButton, Group, Row, Capsule, Pills } from "@/components/ios";
 import { EarOrder, blankEar } from "@/components/order";
 import { UndoPill } from "@/components/ui/undo-pill";
 import { FEES, money, quoteLines, quoteTotal, earModel } from "@/lib/pricing";
@@ -38,20 +38,19 @@ export default function Compare({ menu = null, onUse }) {
 
   return (
     <div className="min-h-screen pb-16">
-      <NavBar wide title="Compare prices" shortTitle="Compare" subtitle="Side by side for the patient"
+      <NavBar wide compact title="Compare prices" shortTitle="Compare" subtitle="Side by side for the patient"
         left={<>{menu}<NavButton onClick={reset}><RotateCcw className="h-[18px] w-[18px]" strokeWidth={2.4} />New</NavButton></>}
         right={<ThemeButton />} />
 
-      <main className="mx-auto grid max-w-2xl grid-cols-1 gap-7 px-4 pt-4 lg:max-w-6xl">
-        <div className="lg:w-[calc(50%-1.25rem)]">
-          <Group header="For this patient" footer="Applies to every option below. Everything adds fitting, orientation & dispense and shipping.">
-            <ChoiceRow label="Hearing aids" value={c.n} onChange={(v) => set({ n: +v })}
+      <main className="mx-auto grid max-w-2xl grid-cols-1 gap-4 px-4 pt-3 lg:max-w-6xl">
+        <div role="group" aria-label="For this patient" className="flex min-w-0 flex-wrap items-center gap-x-5 gap-y-2.5 rounded-[12px] bg-card px-4 py-2.5">
+          <Pills label="Hearing aids" value={c.n} onChange={(v) => set({ n: +v })}
             options={[{ value: 1, label: "One aid" }, { value: 2, label: "Two aids" }]} />
-            <ChoiceRow label="Included" value={c.incl} onChange={(v) => set({ incl: v })}
-            options={[{ value: "all", label: "Everything" }, { value: "aid", label: "Aid only" }]} />
-            <ChoiceRow label="Earmolds" value={c.molds} onChange={(v) => set({ molds: +v })} last
+          <Pills label="Included" value={c.incl} onChange={(v) => set({ incl: v })}
+            options={[{ value: "all", label: "Everything", title: "Hearing aid + fitting, orientation & dispense + shipping" }, { value: "aid", label: "Aid only" }]} />
+          <Pills label="Earmolds" value={c.molds} onChange={(v) => set({ molds: +v })}
             options={[{ value: 0, label: "None" }, { value: 1, label: `One · ${money(FEES.molds[1])}` }, { value: 2, label: `Two · ${money(FEES.molds[2])}` }]} />
-          </Group>
+          <span className="ml-auto text-[12px] text-label2">Applies to every option</span>
         </div>
 
         <div className={cn("grid grid-cols-1 gap-8 sm:grid-cols-2 lg:gap-6", COLS[c.opts.length])}>
@@ -73,7 +72,7 @@ export default function Compare({ menu = null, onUse }) {
                   )}
                 </div>
 
-                <EarOrder compact e={e} k={k} onChange={(patch) => setOpt(i, patch)} />
+                <EarOrder compact={c.opts.length > 2} e={e} k={k} onChange={(patch) => setOpt(i, patch)} />
 
                 {m ? (
                   <div className="grid gap-3">

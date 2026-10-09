@@ -11,7 +11,7 @@ import logo from "@/assets/bhsc-logo.png";
 export const BHSC_LOGO = logo;
 
 /* ── Navigation bar: large title that condenses into a frosted bar on scroll ── */
-export function NavBar({ title, shortTitle, subtitle, left, right, wide }) {
+export function NavBar({ title, shortTitle, subtitle, left, right, wide, compact }) {
   const [small, setSmall] = useState(false);
   const [solid, setSolid] = useState(false);
   useEffect(() => {
@@ -29,12 +29,24 @@ export function NavBar({ title, shortTitle, subtitle, left, right, wide }) {
           <div className="flex min-w-[88px] items-center justify-end">{right}</div>
         </div>
       </div>
-      <header className={cn("mx-auto max-w-2xl px-4 pb-2 pt-[calc(3.25rem+env(safe-area-inset-top,0px))]", wide === true ? "lg:max-w-6xl" : wide)}>
-        <img src={logo} alt="BHSC — Buffalo Hearing & Speech Center. Nurture · Educate · Communicate"
-          className="bhsc-logo mb-3 block h-auto w-[112px] select-none" draggable="false" />
-        <h1 className="text-[34px] font-bold leading-[1.1] tracking-[-0.02em]">{title}</h1>
-        {subtitle && <p className="mt-1 text-[15px] text-label2">{subtitle}</p>}
-      </header>
+      {compact ? (
+        /* Compact header (computer): logo beside the title, one line, so the page needs less scrolling */
+        <header className={cn("mx-auto flex max-w-2xl items-center gap-4 px-4 pb-1 pt-[calc(3rem+env(safe-area-inset-top,0px))]", wide === true ? "lg:max-w-6xl" : wide)}>
+          <img src={logo} alt="BHSC — Buffalo Hearing & Speech Center. Nurture · Educate · Communicate"
+            className="bhsc-logo block h-auto w-[84px] shrink-0 select-none" draggable="false" />
+          <div className="min-w-0 border-l border-sep pl-4">
+            <h1 className="truncate text-[26px] font-bold leading-[1.1] tracking-[-0.02em]">{title}</h1>
+            {subtitle && <p className="truncate text-[13px] text-label2">{subtitle}</p>}
+          </div>
+        </header>
+      ) : (
+        <header className={cn("mx-auto max-w-2xl px-4 pb-2 pt-[calc(3.25rem+env(safe-area-inset-top,0px))]", wide === true ? "lg:max-w-6xl" : wide)}>
+          <img src={logo} alt="BHSC — Buffalo Hearing & Speech Center. Nurture · Educate · Communicate"
+            className="bhsc-logo mb-3 block h-auto w-[112px] select-none" draggable="false" />
+          <h1 className="text-[34px] font-bold leading-[1.1] tracking-[-0.02em]">{title}</h1>
+          {subtitle && <p className="mt-1 text-[15px] text-label2">{subtitle}</p>}
+        </header>
+      )}
     </>
   );
 }
@@ -104,32 +116,32 @@ export function Group({ header, footer, children, className }) {
     </div>
   );
 }
-export function Row({ children, className, last, as: As = "div", ...props }) {
+export function Row({ children, className, last, dense, as: As = "div", ...props }) {
   return (
-    <As className={cn("relative flex min-h-[44px] w-full items-center gap-3 bg-card pl-4 text-left", className)} {...props}>
-      <div className={cn("flex min-h-[44px] min-w-0 flex-1 items-center gap-3 py-2.5 pr-4", !last && "hairline")}>{children}</div>
+    <As className={cn("relative flex w-full items-center gap-3 bg-card pl-4 text-left", dense ? "min-h-[36px]" : "min-h-[44px]", className)} {...props}>
+      <div className={cn("flex min-w-0 flex-1 items-center gap-3 pr-4", dense ? "min-h-[36px] py-1.5" : "min-h-[44px] py-2.5", !last && "hairline")}>{children}</div>
     </As>
   );
 }
 
-/* ── Choice row: label on the left, small buttons on the right (one can be picked) ── */
-export function ChoiceRow({ label, value, options, onChange, last }) {
+/* ── Pills: a small label with small buttons beside it (one can be picked) — for compact bars ── */
+export function Pills({ label, aria, value, options, onChange, className }) {
   return (
-    <Row last={last}>
-      <span className="w-[7.5rem] shrink-0 text-[17px]">{label}</span>
-      <span role="radiogroup" aria-label={label} className="flex min-w-0 flex-1 flex-wrap justify-end gap-1.5">
+    <div className={cn("flex min-w-0 items-center gap-2", className)}>
+      {label && <span className="shrink-0 text-[12px] font-semibold uppercase tracking-[0.03em] text-label2">{label}</span>}
+      <span role="radiogroup" aria-label={label || aria} className="flex flex-wrap gap-1">
         {options.map((o) => {
           const on = String(value) === String(o.value);
           return (
-            <button key={o.value} type="button" role="radio" aria-checked={on} onClick={() => onChange(o.value)}
-              className={cn("press h-9 rounded-[8px] px-3 text-[15px] font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-tint",
+            <button key={o.value} type="button" role="radio" aria-checked={on} title={o.title} onClick={() => onChange(o.value)}
+              className={cn("press h-8 whitespace-nowrap rounded-[8px] px-2.5 text-[14px] font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-tint",
                 on ? "bg-tint-soft text-tint shadow-[inset_0_0_0_2px_var(--tint)]" : "bg-fill text-label hover:bg-fill2")}>
               {o.label}
             </button>
           );
         })}
       </span>
-    </Row>
+    </div>
   );
 }
 

@@ -18,7 +18,7 @@ export default function HAPrices({ menu = null }) {
 
   return (
     <div className="min-h-screen pb-16">
-      <NavBar wide="lg:max-w-4xl" title="2026 HA prices" subtitle="Every hearing aid, its tier and price" left={menu} right={<ThemeButton />} />
+      <NavBar wide="lg:max-w-4xl" compact title="2026 HA prices" subtitle="Every hearing aid, its tier and price" left={menu} right={<ThemeButton />} />
       <main className="mx-auto grid max-w-2xl grid-cols-1 gap-7 px-4 pt-4 lg:max-w-4xl">
         <div className="grid gap-3">
           <SearchField value={q} onChange={setQ} placeholder="Search models, styles or “tier 5”" />

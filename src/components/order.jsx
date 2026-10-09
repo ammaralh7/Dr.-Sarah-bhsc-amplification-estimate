@@ -11,22 +11,39 @@ import { cn } from "@/lib/utils";
 
 export const blankEar = () => ({ mfr: null, style: null, model: null, mkey: null });
 
-export function EarOrder({ title, side, e, k, onChange, compact = false }) {
+export function EarOrder({ title, side, e, k, onChange, compact = false, wide = false }) {
   const sel = earModel(e);
   const price = (m) => (k == null ? earPrice(m[4]) : TIERS[m[4]][k]);
   return (
     <Group header={side == null ? title : <span className="inline-flex items-center gap-1.5"><span className={cn("h-2.5 w-2.5 rounded-full", side === 0 ? "bg-[#ff3b30]" : "bg-[#0a84ff]")} />{title}</span>}
       footer={sel && sel[5] ? "Older price list — confirm the cost with the manufacturer before ordering." : null}>
-      <Field label="Manufacturer">
-        <Choices label="Manufacturer" value={e.mfr} cols={compact ? "grid-cols-2" : "grid-cols-2 sm:grid-cols-4"}
-          options={MFRS.map(([name, color]) => ({ value: name, label: name, dot: color }))}
-          onChange={(v) => onChange({ mfr: v, model: null, mkey: null, style: e.style && styleAvailable(v, e.style) ? e.style : null })} />
-      </Field>
-      <Field label="Style" hint={e.style ? STYLES.find(([st]) => st === e.style)?.[1] : !e.mfr ? "Choose the manufacturer first" : null}>
-        <Choices label="Style" value={e.style} cols={compact ? "grid-cols-3" : "grid-cols-3 sm:grid-cols-6"}
-          options={STYLES.map(([st, long]) => ({ value: st, label: st, title: long, disabled: !e.mfr || !styleAvailable(e.mfr, st) }))}
-          onChange={(st) => onChange({ style: st, ...(e.model != null && fits(MODELS[e.model][3], st) ? {} : { model: null, mkey: null }) })} />
-      </Field>
+      {(() => {
+        const mfr = (
+          <Choices label="Manufacturer" value={e.mfr} cols={compact ? "grid-cols-2" : "grid-cols-2 sm:grid-cols-4"}
+            options={MFRS.map(([name, color]) => ({ value: name, label: name, dot: color }))}
+            onChange={(v) => onChange({ mfr: v, model: null, mkey: null, style: e.style && styleAvailable(v, e.style) ? e.style : null })} />
+        );
+        const style = (
+          <Choices label="Style" value={e.style} cols={compact ? "grid-cols-3" : "grid-cols-3 sm:grid-cols-6"}
+            options={STYLES.map(([st, long]) => ({ value: st, label: st, title: long, disabled: !e.mfr || !styleAvailable(e.mfr, st) }))}
+            onChange={(st) => onChange({ style: st, ...(e.model != null && fits(MODELS[e.model][3], st) ? {} : { model: null, mkey: null }) })} />
+        );
+        const styleHint = e.style ? STYLES.find(([st]) => st === e.style)?.[1] : !e.mfr ? "Choose the manufacturer first" : null;
+        // wide (one full-width card on a computer): manufacturer and style side by side, one row
+        return wide ? (
+          <div className="bg-card pl-4">
+            <div className="hairline grid min-w-0 grid-cols-1 gap-3 py-2.5 pr-4 lg:grid-cols-[minmax(0,4fr)_minmax(0,5fr)] lg:gap-6">
+              <Sub label="Manufacturer">{mfr}</Sub>
+              <Sub label="Style" hint={styleHint}>{style}</Sub>
+            </div>
+          </div>
+        ) : (
+          <>
+            <Field label="Manufacturer">{mfr}</Field>
+            <Field label="Style" hint={styleHint}>{style}</Field>
+          </>
+        );
+      })()}
       <Field label="Model" last>
         <ModelPicker e={e} price={price} perEar={k == null}
           onPick={(i) => { const m = MODELS[i]; onChange({ model: i, mkey: modelKey(m[0], m[1], m[2]) }); }} />
@@ -39,13 +56,18 @@ export function EarOrder({ title, side, e, k, onChange, compact = false }) {
 function Field({ label, hint, last, children }) {
   return (
     <div className="bg-card pl-4">
-      <div className={cn("grid min-w-0 grid-cols-1 gap-2 py-3 pr-4", !last && "hairline")}>
-        <div className="flex items-baseline justify-between gap-3">
-          <span className="text-[13px] font-semibold uppercase tracking-[0.02em] text-label2">{label}</span>
-          {hint && <span className="truncate text-[13px] text-label2">{hint}</span>}
-        </div>
-        {children}
+      <div className={cn("min-w-0 py-2.5 pr-4", !last && "hairline")}><Sub label={label} hint={hint}>{children}</Sub></div>
+    </div>
+  );
+}
+function Sub({ label, hint, children }) {
+  return (
+    <div className="grid min-w-0 grid-cols-1 gap-1.5">
+      <div className="flex items-baseline justify-between gap-3">
+        <span className="text-[12px] font-semibold uppercase tracking-[0.03em] text-label2">{label}</span>
+        {hint && <span className="truncate text-[12px] text-label2">{hint}</span>}
       </div>
+      {children}
     </div>
   );
 }
@@ -58,7 +80,7 @@ function Choices({ label, value, options, onChange, cols }) {
         const on = value === o.value;
         return (
           <button key={o.value} type="button" role="radio" aria-checked={on} disabled={o.disabled} title={o.title} onClick={() => onChange(o.value)}
-            className={cn("press inline-flex h-11 min-w-0 items-center justify-center gap-2 rounded-[10px] px-3 text-[15px] font-semibold transition-colors",
+            className={cn("press inline-flex h-9 min-w-0 items-center justify-center gap-2 rounded-[9px] px-3 text-[15px] font-semibold transition-colors",
               "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-tint disabled:cursor-not-allowed disabled:opacity-30",
               on ? "bg-tint-soft text-tint shadow-[inset_0_0_0_2px_var(--tint)]" : "bg-fill text-label enabled:hover:bg-fill2")}>
             {o.dot && <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: o.dot }} />}
@@ -123,7 +145,7 @@ function ModelPicker({ e, price, perEar, onPick }) {
     <div ref={box} className="grid min-w-0 grid-cols-1 gap-2">
       {!open ? (
         <button type="button" disabled={!ready} onClick={() => setOpen(true)} aria-haspopup="listbox" aria-label={sel ? `Model: ${sel[1]}. Change` : "Choose a model"}
-          className="press flex h-12 w-full min-w-0 items-center gap-3 rounded-[10px] bg-fill px-3 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-tint enabled:hover:bg-fill2 disabled:cursor-not-allowed disabled:opacity-40">
+          className="press flex h-10 w-full min-w-0 items-center gap-3 rounded-[9px] bg-fill px-3 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-tint enabled:hover:bg-fill2 disabled:cursor-not-allowed disabled:opacity-40">
           {sel ? (
             <>
               <span className="min-w-0 flex-1 truncate text-[15px]"><span className="font-semibold">{sel[1]}</span><span className="text-label2"> · {sel[2]} · Tier {sel[4]}</span></span>
@@ -139,7 +161,7 @@ function ModelPicker({ e, price, perEar, onPick }) {
         </button>
       ) : (
         <>
-          <label className="flex h-12 items-center gap-2 rounded-[10px] bg-fill px-3 shadow-[inset_0_0_0_2px_var(--tint)]">
+          <label className="flex h-10 items-center gap-2 rounded-[9px] bg-fill px-3 shadow-[inset_0_0_0_2px_var(--tint)]">
             <Search className="h-[18px] w-[18px] shrink-0 text-tint" strokeWidth={2.4} />
             <input ref={input} value={q} onChange={(ev) => setQ(ev.target.value)} onKeyDown={key} placeholder={`Search ${e.mfr} ${e.style} models`}
               role="combobox" aria-expanded="true" aria-label="Search models" autoComplete="off"
