@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { ArrowRight, Copy, Plus, RotateCcw, X } from "lucide-react";
-import { NavBar, NavButton, ThemeButton, Group, Row, Capsule, SelectRow } from "@/components/ios";
+import { NavBar, NavButton, ThemeButton, Group, Row, Capsule, ChoiceRow } from "@/components/ios";
 import { EarOrder, blankEar } from "@/components/order";
 import { UndoPill } from "@/components/ui/undo-pill";
 import { FEES, money, quoteLines, quoteTotal, earModel } from "@/lib/pricing";
@@ -44,20 +44,13 @@ export default function Compare({ menu = null, onUse }) {
 
       <main className="mx-auto grid max-w-2xl grid-cols-1 gap-7 px-4 pt-4 lg:max-w-6xl">
         <div className="lg:w-[calc(50%-1.25rem)]">
-          <Group header="For this patient" footer="Applies to every option below.">
-            <SelectRow label="Hearing aids" value={c.n} onChange={(v) => set({ n: +v })}>
-              <option value="1">One aid</option>
-              <option value="2">Two aids</option>
-            </SelectRow>
-            <SelectRow label="Included" value={c.incl} onChange={(v) => set({ incl: v })}>
-              <option value="all">Everything (fitting + shipping)</option>
-              <option value="aid">Aid only</option>
-            </SelectRow>
-            <SelectRow label="Earmolds" value={c.molds} onChange={(v) => set({ molds: +v })} last>
-              <option value="0">None</option>
-              <option value="1">One · {money(FEES.molds[1])}</option>
-              <option value="2">Two · {money(FEES.molds[2])}</option>
-            </SelectRow>
+          <Group header="For this patient" footer="Applies to every option below. Everything adds fitting, orientation & dispense and shipping.">
+            <ChoiceRow label="Hearing aids" value={c.n} onChange={(v) => set({ n: +v })}
+            options={[{ value: 1, label: "One aid" }, { value: 2, label: "Two aids" }]} />
+            <ChoiceRow label="Included" value={c.incl} onChange={(v) => set({ incl: v })}
+            options={[{ value: "all", label: "Everything" }, { value: "aid", label: "Aid only" }]} />
+            <ChoiceRow label="Earmolds" value={c.molds} onChange={(v) => set({ molds: +v })} last
+            options={[{ value: 0, label: "None" }, { value: 1, label: `One · ${money(FEES.molds[1])}` }, { value: 2, label: `Two · ${money(FEES.molds[2])}` }]} />
           </Group>
         </div>
 

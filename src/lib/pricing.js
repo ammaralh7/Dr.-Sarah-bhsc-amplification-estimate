@@ -80,7 +80,8 @@ export function quoteLines(s) {
     out.push({ label: "Shipping & handling", sub: "", amount: FEES.ship });
   }
   if (s.molds) out.push({ label: s.molds === 2 ? "Earmolds (two)" : "Earmold (one)", sub: "", amount: FEES.molds[s.molds] });
-  s.addons.forEach((a) => out.push({ label: a.name, sub: a.custom ? `Accessory · cost ${money(a.cost)} × 1.2` : "Accessory", amount: a.price }));
+  // Patient-facing: never show BHSC cost here (the estimate is copied for patients).
+  s.addons.forEach((a) => out.push({ label: a.name, sub: "Accessory", amount: a.price }));
   return out;
 }
 export const quoteTotal = (s) => Math.round(quoteLines(s).reduce((a, l) => a + l.amount, 0) * 100) / 100;
