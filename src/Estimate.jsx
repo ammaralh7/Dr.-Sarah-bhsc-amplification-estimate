@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from "react";
-import { Copy, MinusCircle, Plus, RotateCcw, TriangleAlert } from "lucide-react";
-import { NavBar, NavButton, ThemeButton, Group, Row, Switch, Sheet, PriceBar, Capsule, ChoiceRow, FieldRow } from "@/components/ios";
-import { SegmentedControl } from "@/components/ui/segmented-control";
+import { Copy, Plus, RotateCcw, TriangleAlert, X } from "lucide-react";
+import { NavBar, NavButton, ThemeButton, Group, Row, Switch, Sheet, PriceBar, Capsule, Pills, FieldRow } from "@/components/ios";
 import { UndoPill } from "@/components/ui/undo-pill";
 import { EarOrder, blankEar } from "@/components/order";
 import { cn } from "@/lib/utils";
@@ -10,7 +9,7 @@ import {
   EAR_NAMES, mixed, earsInUse, earModel, orderReady, orderMfrs, accessoriesFor, accessoryPrice, earPrice, MIXED_CONFIRMED, refund, crosPair,
 } from "@/lib/pricing";
 
-// One page: the whole order is dropdowns; the estimate below updates as it is filled in.
+// One page, laid out for a computer: the order at the top, the estimate and refund under it, updating as it is filled in.
 const blank = () => ({ n: null, same: true, ears: [blankEar(), blankEar()], incl: "all", molds: 0, addons: [], notes: "", caseNo: "", code: "" });
 
 export default function Estimate({ menu = null, seed = null }) {
@@ -36,82 +35,79 @@ export default function Estimate({ menu = null, seed = null }) {
   const accList = accessoriesFor(s);
 
   return (
-    <div className="min-h-screen pb-36">
-      <NavBar wide title="Amplification Estimate" shortTitle="Estimate" subtitle="Buffalo Hearing & Speech Center"
+    <div className="min-h-screen pb-36 lg:pb-10">
+      <NavBar wide compact title="Amplification Estimate" shortTitle="Estimate" subtitle="Buffalo Hearing & Speech Center"
         left={<>{menu}<NavButton onClick={reset}><RotateCcw className="h-[18px] w-[18px]" strokeWidth={2.4} />New</NavButton></>}
         right={<ThemeButton />} />
 
-      {/* Laid out for a computer, top to bottom at full width: order and options, the hearing aid(s)
+      {/* Compact, top to bottom at full width: one bar for the order options, the hearing aid(s)
           (Right | Left ear side by side when they differ), accessories, then the estimate and refund. */}
-      <main className="mx-auto grid max-w-2xl grid-cols-1 gap-7 px-4 pt-4 lg:max-w-6xl lg:grid-cols-2 lg:items-start lg:gap-x-8">
-        <Group header="Order">
-          <ChoiceRow label="Hearing aids" value={s.n} onChange={(v) => set({ n: +v, code: "" })} last={s.n !== 2}
+      <main className="mx-auto grid max-w-2xl grid-cols-1 gap-4 px-4 pt-3 lg:max-w-6xl">
+        <div role="group" aria-label="Order" className="flex min-w-0 flex-wrap items-center gap-x-5 gap-y-2.5 rounded-[12px] bg-card px-4 py-2.5">
+          <Pills label="Hearing aids" value={s.n} onChange={(v) => set({ n: +v, code: "" })}
             options={[{ value: 1, label: "One aid" }, { value: 2, label: "Two aids" }]} />
           {s.n === 2 && (
-            <Row last>
-              <span className="flex-1 text-[17px]">Same aid in both ears</span>
+            <label className="flex cursor-pointer items-center gap-2.5 text-[15px]">
               <Switch label="Same aid in both ears" checked={s.same}
                 onChange={(on) => setS((p) => ({ ...p, same: on, code: "", ears: on ? p.ears : [p.ears[0], { ...p.ears[0] }] }))} />
-            </Row>
+              Same aid in both ears
+            </label>
           )}
-        </Group>
-
-        <Group header="Options" footer="Everything adds fitting, orientation & dispense and shipping.">
-          <ChoiceRow label="Included" value={s.incl} onChange={(v) => set({ incl: v })}
-            options={[{ value: "all", label: "Everything" }, { value: "aid", label: "Aid only" }]} />
-          <ChoiceRow label="Earmolds" value={s.molds} onChange={(v) => set({ molds: +v })} last
+          <Pills label="Included" value={s.incl} onChange={(v) => set({ incl: v })}
+            options={[{ value: "all", label: "Everything", title: "Hearing aid + fitting, orientation & dispense + shipping" }, { value: "aid", label: "Aid only" }]} />
+          <Pills label="Earmolds" value={s.molds} onChange={(v) => set({ molds: +v })}
             options={[{ value: 0, label: "None" }, { value: 1, label: `One · ${money(FEES.molds[1])}` }, { value: 2, label: `Two · ${money(FEES.molds[2])}` }]} />
-        </Group>
+        </div>
 
         {twoEars ? (
-          <div className="grid min-w-0 grid-cols-1 gap-7 lg:col-span-2 lg:grid-cols-2 lg:gap-8">
+          <div className="grid min-w-0 grid-cols-1 gap-4 lg:grid-cols-2 lg:gap-6">
             {[0, 1].map((i) => <EarOrder key={i} side={i} title={EAR_NAMES[i]} e={s.ears[i]} k={null} onChange={(patch) => setEar(i, patch)} />)}
           </div>
         ) : (
-          <div className="min-w-0 lg:col-span-2">
-            <EarOrder title={s.n === 2 ? "Hearing aids · both ears" : "Hearing aid"} e={s.ears[0]} k={k} onChange={(patch) => setEar(0, patch)} />
-          </div>
+          <EarOrder wide title={s.n === 2 ? "Hearing aids · both ears" : "Hearing aid"} e={s.ears[0]} k={k} onChange={(patch) => setEar(0, patch)} />
         )}
 
-        <Group header="Accessories" footer="Prices shown are patient prices." className="min-w-0 lg:col-span-2">
+        <div role="group" aria-label="Accessories" className="flex min-w-0 flex-wrap items-center gap-2 rounded-[12px] bg-card px-4 py-2">
+          <span className="mr-1 shrink-0 text-[12px] font-semibold uppercase tracking-[0.03em] text-label2">Accessories</span>
           {s.addons.map((a) => (
-            <Row key={a.name}>
+            <span key={a.name} className="inline-flex h-8 items-center gap-1.5 rounded-full bg-fill pl-3 pr-1 text-[14px]">
+              {a.name}<span className="tnum text-label2">{money(a.price)}</span>
               <button type="button" aria-label={`Remove ${a.name}`} onClick={() => set({ addons: s.addons.filter((x) => x.name !== a.name) })}
-                className="press -ml-1 shrink-0 rounded-full text-[#ff3b30] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-tint">
-                <MinusCircle className="h-[22px] w-[22px]" strokeWidth={2} />
+                className="press grid h-6 w-6 place-items-center rounded-full text-label2 hover:bg-fill2 hover:text-label focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-tint">
+                <X className="h-3.5 w-3.5" strokeWidth={2.6} />
               </button>
-              <span className="min-w-0 flex-1 truncate text-[17px]">{a.name}</span>
-              <span className="tnum shrink-0 text-[17px] text-label2">{money(a.price)}</span>
-            </Row>
+            </span>
           ))}
-          <Row as="button" type="button" last onClick={() => setAccOpen(true)} className="hover:bg-fill">
-            <Plus className="h-5 w-5 shrink-0 text-tint" strokeWidth={2.4} />
-            <span className="flex-1 text-[17px] text-tint">Add accessory</span>
-          </Row>
-        </Group>
+          <button type="button" onClick={() => setAccOpen(true)}
+            className="press inline-flex h-8 items-center gap-1 rounded-full px-2 text-[14px] font-semibold text-tint hover:bg-tint-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-tint">
+            <Plus className="h-4 w-4" strokeWidth={2.6} />Add accessory
+          </button>
+          <span className="ml-auto text-[12px] text-label2">Patient prices</span>
+        </div>
 
         <section ref={estimateRef} aria-label="Estimate and refund"
-          className="grid min-w-0 scroll-mt-[calc(4rem+env(safe-area-inset-top,0px))] grid-cols-1 gap-10 border-t border-sep pt-7 lg:col-span-2 lg:grid-cols-2 lg:items-start lg:gap-8">
+          className="grid min-w-0 scroll-mt-[calc(3.5rem+env(safe-area-inset-top,0px))] grid-cols-1 gap-8 border-t border-sep pt-4 lg:grid-cols-2 lg:items-start lg:gap-6">
           {ready ? (
             <>
               <Receipt s={s} set={set} onCopy={() => setToast((t) => t + 1)} onReset={reset} />
               <Refund s={s} />
             </>
           ) : (
-            <p className="rounded-[12px] bg-card px-4 py-6 text-center text-[15px] text-label2 lg:col-span-2">
+            <p className="rounded-[12px] bg-card px-4 py-4 text-center text-[15px] text-label2 lg:col-span-2">
               {!s.n ? "Choose one aid or two, then the hearing aid, to see the estimate and refund." : twoEars ? "Choose a hearing aid for each ear to see the estimate and refund." : "Choose the hearing aid to see the estimate and refund."}
             </p>
           )}
         </section>
       </main>
 
-      <PriceBar wide label={names.length ? `${names.join(" + ")} · ${s.n === 2 ? (twoEars ? "two aids" : "pair") : "one aid"}` : "Estimate"}
+      {/* Phones only: on a computer the estimate total is already on screen */}
+      <PriceBar wide className="lg:hidden" label={names.length ? `${names.join(" + ")} · ${s.n === 2 ? (twoEars ? "two aids" : "pair") : "one aid"}` : "Estimate"}
         amount={ready ? money(quoteTotal(s)) : "—"}
         action={ready ? <Capsule onClick={() => estimateRef.current?.scrollIntoView({ behavior: "smooth", block: "start" })}>Review</Capsule> : null} />
 
       <AccessorySheet open={accOpen} onClose={() => setAccOpen(false)} s={s} set={set} list={accList} mfrs={orderMfrs(s)} />
       {/* Copy confirmation: Undo Pill (21st.dev #29941, components/ui/undo-pill.tsx); OK closes it early */}
-      <div className="pointer-events-none fixed inset-x-0 bottom-[calc(6.5rem+env(safe-area-inset-bottom,0px))] z-50 flex justify-center px-4">
+      <div className="pointer-events-none fixed inset-x-0 bottom-[calc(6.5rem+env(safe-area-inset-bottom,0px))] z-50 flex justify-center px-4 lg:bottom-8">
         <UndoPill open={toast > 0} label="Estimate copied" duration={4} undoLabel="OK" onUndo={() => setToast(0)} onExpire={() => setToast(0)} />
       </div>
     </div>
@@ -142,45 +138,55 @@ function Receipt({ s, set, onCopy, onReset }) {
   const copy = () => { try { navigator.clipboard.writeText(text).then(onCopy, () => setFallback(text)); } catch { setFallback(text); } };
 
   return (
-    <div className="grid min-w-0 grid-cols-1 gap-6">
-      <div className="min-w-0">
-        <div className="text-[15px] font-semibold text-label2">Estimate</div>
-        <div className="tnum mt-1 text-[52px] font-bold leading-none tracking-[-0.035em]">{money(total)}</div>
-        <p className="mt-2 text-[15px] text-label2">{what} · {date}</p>
+    <div className="grid min-w-0 grid-cols-1 gap-3">
+      <div className="flex min-w-0 items-end justify-between gap-3">
+        <div className="min-w-0">
+          <div className="text-[13px] font-semibold text-label2">Estimate</div>
+          <div className="tnum text-[36px] font-bold leading-none tracking-[-0.03em]">{money(total)}</div>
+        </div>
+        <p className="shrink-0 pb-1 text-[13px] text-label2">{what} · {date}</p>
       </div>
 
       <Group>
         {lines.map((l, j) => (
-          <Row key={`${l.label}-${j}`}>
-            <span className="min-w-0 flex-1"><span className="block text-[17px]">{l.label}</span>{l.sub && <span className="block truncate text-[13px] text-label2">{l.sub}</span>}</span>
-            <span className="tnum shrink-0 text-[17px]">{money(l.amount)}</span>
+          <Row dense key={`${l.label}-${j}`}>
+            <span className="min-w-0 flex-1 truncate text-[15px]">{l.label}{l.sub && <span className="text-[13px] text-label2"> · {l.sub}</span>}</span>
+            <span className="tnum shrink-0 text-[15px]">{money(l.amount)}</span>
           </Row>
         ))}
-        <Row last>
-          <span className="flex-1 text-[17px] font-semibold">Total</span>
-          <span className="tnum text-[17px] font-semibold">{money(total)}</span>
+        <Row dense last>
+          <span className="flex-1 text-[15px] font-semibold">Total</span>
+          <span className="tnum text-[15px] font-semibold">{money(total)}</span>
         </Row>
       </Group>
 
       <Group header="Notes & billing (never saved)" footer="Includes up to 4 follow-up visits in the first year.">
-        <FieldRow label="Case #" value={s.caseNo} onChange={(v) => set({ caseNo: v })} placeholder="Optional" inputMode="numeric" />
-        <FieldRow label="Billing code" value={code} onChange={(v) => set({ code: v })} />
         <div className="bg-card pl-4">
-          <div className="flex min-w-0 items-start gap-3 py-2.5 pr-4">
-            <label htmlFor="estimate-notes" className="w-[7.5rem] shrink-0 text-[17px] leading-snug">Notes</label>
-            <textarea id="estimate-notes" value={s.notes} onChange={(e) => set({ notes: e.target.value })} placeholder="Optional" rows={3}
-              className="min-h-[4.5rem] w-0 min-w-0 flex-1 resize-y bg-transparent text-[17px] leading-snug text-label outline-none [field-sizing:content] placeholder:text-label3" />
+          <div className="hairline grid min-h-[36px] grid-cols-2 items-center gap-4 py-1 pr-4">
+            <label className="flex min-w-0 items-center gap-3 text-[15px]"><span className="shrink-0">Case #</span>
+              <input value={s.caseNo} onChange={(e) => set({ caseNo: e.target.value })} placeholder="Optional" inputMode="numeric" autoComplete="off" aria-label="Case #"
+                className="w-0 min-w-0 flex-1 bg-transparent text-right text-[15px] text-label outline-none placeholder:text-label3" /></label>
+            <label className="flex min-w-0 items-center gap-3 text-[15px]"><span className="shrink-0">Billing code</span>
+              <input value={code} onChange={(e) => set({ code: e.target.value })} autoComplete="off" aria-label="Billing code"
+                className="w-0 min-w-0 flex-1 bg-transparent text-right text-[15px] text-label outline-none placeholder:text-label3" /></label>
+          </div>
+        </div>
+        <div className="bg-card pl-4">
+          <div className="flex min-w-0 items-start gap-3 py-2 pr-4">
+            <label htmlFor="estimate-notes" className="shrink-0 text-[15px] leading-snug">Notes</label>
+            <textarea id="estimate-notes" value={s.notes} onChange={(e) => set({ notes: e.target.value })} placeholder="Optional" rows={2}
+              className="min-h-[2.75rem] w-0 min-w-0 flex-1 resize-y bg-transparent text-[15px] leading-snug text-label outline-none [field-sizing:content] placeholder:text-label3" />
           </div>
         </div>
       </Group>
 
       {warnings.map((n) => (
-        <div key={n} className="flex gap-2.5 rounded-[12px] bg-warn px-4 py-3 text-[15px] text-warn-ink"><TriangleAlert className="mt-0.5 h-[18px] w-[18px] shrink-0" />{n}</div>
+        <div key={n} className="flex gap-2 rounded-[10px] bg-warn px-3 py-2 text-[14px] leading-snug text-warn-ink"><TriangleAlert className="mt-0.5 h-4 w-4 shrink-0" />{n}</div>
       ))}
 
       <div className="flex flex-wrap gap-2">
-        <Capsule onClick={copy}><Copy className="h-[18px] w-[18px]" strokeWidth={2.4} />Copy estimate</Capsule>
-        <Capsule variant="tinted" onClick={onReset}><RotateCcw className="h-[18px] w-[18px]" strokeWidth={2.4} />New patient</Capsule>
+        <Capsule className="h-10 px-4 text-[15px]" onClick={copy}><Copy className="h-4 w-4" strokeWidth={2.4} />Copy estimate</Capsule>
+        <Capsule className="h-10 px-4 text-[15px]" variant="tinted" onClick={onReset}><RotateCcw className="h-4 w-4" strokeWidth={2.4} />New patient</Capsule>
       </div>
       {fallback && (
         <div className="grid gap-2">
@@ -202,32 +208,40 @@ function Refund({ s }) {
   const r = refund(s, cur);
   if (!r) return null;
   return (
-    <div className="grid min-w-0 grid-cols-1 gap-4">
-      <div>
-        <h2 className="text-[20px] font-semibold leading-tight tracking-[-0.015em]">Refund if returned</h2>
-        <p className="mt-1 text-[15px] text-label2">BHSC return policy · private pay & non-Medicaid insurance</p>
+    <div className="grid min-w-0 grid-cols-1 gap-3">
+      <div className="flex min-w-0 flex-wrap items-end justify-between gap-x-3 gap-y-2">
+        <div className="min-w-0">
+          <h2 className="text-[17px] font-semibold leading-tight">Refund if returned</h2>
+          <p className="text-[13px] text-label2">BHSC return policy · private pay & non-Medicaid insurance</p>
+        </div>
+        {modes.length > 1 && <Pills aria="What is returned" value={cur} onChange={setMode} options={modes.map(([value, label]) => ({ value, label }))} />}
       </div>
-      {modes.length > 1 && <SegmentedControl label="What is returned" value={cur} onValueChange={setMode} options={modes.map(([value, label]) => ({ value, label }))} />}
       <Group footer={cur === "all"
         ? `Superbill: RETURN and RETSERVFEE (billing enters ${money(r.fee)}). Essential Plan patients pay the ${money(r.fee)} service fee at the front desk at the time of return.`
         : "One side of a pair can be returned with no penalty. Use RETURN on the superbill; no RETSERVFEE."}>
         {r.rows.map((l) => (
-          <Row key={l.label}>
-            <span className="min-w-0 flex-1"><span className="block text-[17px]">{l.label}</span>{l.sub && <span className="block text-[13px] text-label2">{l.sub}</span>}</span>
-            <span className={`tnum shrink-0 text-[17px] ${l.amount < 0 ? "text-label2" : ""}`}>{l.amount < 0 ? `−${money(-l.amount)}` : money(l.amount)}</span>
+          <Row dense key={l.label}>
+            <span className="min-w-0 flex-1 text-[15px]">{l.label}{l.sub && <span className="block text-[12px] text-label2">{l.sub}</span>}</span>
+            <span className={`tnum shrink-0 text-[15px] ${l.amount < 0 ? "text-label2" : ""}`}>{l.amount < 0 ? `−${money(-l.amount)}` : money(l.amount)}</span>
           </Row>
         ))}
-        <Row last>
-          <span className="flex-1 text-[17px] font-semibold">Refund to patient</span>
-          <span className="tnum text-[17px] font-semibold text-tint">{money(r.refund)}</span>
+        <Row dense last>
+          <span className="flex-1 text-[15px] font-semibold">Refund to patient</span>
+          <span className="tnum text-[15px] font-semibold text-tint">{money(r.refund)}</span>
         </Row>
       </Group>
-      <ul className="grid list-disc gap-1.5 pl-5 text-[13px] leading-snug text-label2">
+      <details className="group text-[12px] leading-snug text-label2">
+        <summary className="cursor-pointer select-none px-4 font-semibold text-tint marker:content-none">
+          <span className="group-open:hidden">More about returns{r.other > 0 ? " (shipping, earmolds, accessories, insurance)" : " (insurance, exchanges)"}</span>
+          <span className="hidden group-open:inline">Hide</span>
+        </summary>
+      <ul className="mt-1.5 grid list-disc gap-1 pl-5">
         {r.other > 0 && <li>Shipping, earmolds and accessories ({money(r.other)}) aren’t covered by the return policy. Check with billing.</li>}
         <li>If insurance paid for any codes, billing returns 100% of the insurance payment to the insurance. The refund comes out of what the patient paid.</li>
         <li>Exchanges: no service fee and no 5%. The patient pays only the difference in hearing aid price. A second exchange is treated as a return plus a new sale.</li>
         <li>Not for TruHearing / Start Hearing programs or Medicaid. Billing completes the return worksheet.</li>
       </ul>
+      </details>
     </div>
   );
 }
