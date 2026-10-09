@@ -1,18 +1,21 @@
 # Amplification Estimate
 
-A hearing-aid pricing website for Dr. Sarah Alhorebi, audiologist at Buffalo Hearing & Speech Center (BHSC). When a patient comes in, she clicks through a few steps and has the price in minutes.
+A hearing-aid pricing website for Dr. Sarah Alhorebi, audiologist at Buffalo Hearing & Speech Center (BHSC). When a patient comes in, she fills in one page and has the price in minutes.
 
 ## What it does
 
-- **Estimate:** each step opens once the one before it is answered: manufacturer, one aid or two, style, model (with search), what's included, earmolds, then add-ons. Earlier answers stay visible at the top, and a tap goes back to any of them. It ends in a receipt with the patient's name, case number and billing code, plus Copy and New patient buttons.
-- **Medicaid:** NY Medicaid prices for ReSound, Phonak and Starkey. It covers the hearing aids only, up to $330 per aid. The estimate shows each model's manufacturer warranty from its Medicaid list.
-- **Price lists** (clinic's hosted version only): load a new manufacturer price list, preview what's new or changed, and apply it. It needs the shared price storage that only the hosted version has, so a copy built from this repo hides the tab and shows the built-in prices.
+- **Estimate:** the whole order on one page, every question a dropdown: one aid or two, then manufacturer, style and model, what's included, earmolds and accessories. When the two ears get different hearing aids, the order splits into a **Right ear** and a **Left ear** card, side by side on a computer. The estimate updates live next to the order, with the patient's name, case number, billing code and *Copy estimate*.
+  - **Accessories:** BHSC cost × 1.2. Any accessory can be typed in with its cost.
+  - **Refund if returned:** works out the refund from BHSC's return policy. BHSC keeps 5% of the hearing aid charge and 5% of the fitting charge, plus a $200 (one aid) or $300 (two aids) service fee. Returning one side of a pair has no penalty.
+  - **CROS/BiCROS:** priced as a one-aid CROS plus a one-aid hearing aid, as the 2026 tier pricing says.
+- **Compare prices:** up to four hearing aids side by side for one patient, with the cheapest marked and how much more the others cost. *Use in estimate* opens the Estimate with the one the patient picks.
+- **2026 HA prices:** every hearing aid on the 2026 lists with its tier and the patient price for one aid and two, plus the tier and fee table.
 
-It has an Apple-style look in the BHSC logo blue with the Inter font, a slide-in sidebar for the tabs, and a light/dark switch. It's made for phones and iPads: no pinch or double-tap zoom, content stays clear of the iPhone notch, and nothing runs past the screen edge.
+It is one self-contained HTML file with no server, logins or outside services. It's built mainly for a computer and also works on phones and iPads, in light or dark mode.
 
 ## Run it
 
-Open `dist/index.html` in a browser. It's a single self-contained file.
+Open `dist/index.html` in a browser. It's a single self-contained file. The live copy is on GitHub Pages (the `gh-pages` branch).
 
 To build it yourself (Node and Python 3):
 
@@ -22,6 +25,10 @@ npm run build
 ```
 
 This runs `vite build` and then `postbuild.py`, and writes `dist/index.html`.
+
+## Not in this repo
+
+BHSC's own costs per hearing aid (`src/data/costs.json`) and the manufacturer price lists are confidential and stay in the clinic's private copy. Without the cost file the app builds the same way; the 2026 HA prices tab just doesn't show a cost column.
 
 ## Built with
 

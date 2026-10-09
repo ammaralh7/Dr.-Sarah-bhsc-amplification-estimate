@@ -1,25 +1,22 @@
-import { useEffect, useState } from "react";
-import { FileText, PanelLeft, ReceiptText, ShieldPlus } from "lucide-react";
+import { useState } from "react";
+import { Columns3, PanelLeft, ReceiptText, Tags } from "lucide-react";
 import Estimate from "@/Estimate";
-import PriceLists from "@/PriceLists";
-import Medicaid from "@/Medicaid";
-import { NavBar, ThemeButton, BHSC_LOGO } from "@/components/ios";
-import { usePriceStore } from "@/lib/store";
+import HAPrices from "@/HAPrices";
+import Compare from "@/Compare";
+import { BHSC_LOGO } from "@/components/ios";
 import { cn } from "@/lib/utils";
 import { Drawer as SideDrawer } from "@/components/ui/side-drawer";
 import { BlurFade } from "@/components/ui/blur-fade";
 
-const TABS = [["estimate", "Estimate", ReceiptText], ["medicaid", "Medicaid", ShieldPlus], ["prices", "Price lists", FileText]];
+// The Medicaid tab (Medicaid.jsx) is off for now at BHSC's request; add it back here to bring it back.
+// Prices are built into the page: to update them, rebuild from new price lists (see the README).
+const TABS = [["estimate", "Estimate", ReceiptText], ["compare", "Compare prices", Columns3], ["haprices", "2026 HA prices", Tags]];
 
 export default function App() {
   const [tab, setTab] = useState("estimate");
   const [open, setOpen] = useState(false);
-  const store = usePriceStore();
-  const [sample, setSample] = useState(null);
-  useEffect(() => { window.claude?.use?.("sample").then((s) => setSample(() => s), () => {}); }, []);
+  const [seed, setSeed] = useState(null);
   const go = (t) => { setTab(t); setOpen(false); window.scrollTo(0, 0); };
-  // Price lists saves to claude.ai's shared storage, so it only shows in the clinic's claude.ai version
-  const tabs = TABS.filter(([id]) => id !== "prices" || store.hosted);
 
   const menu = (
     <button type="button" onClick={() => setOpen(true)} aria-label="Show sidebar" aria-expanded={open}
@@ -36,7 +33,7 @@ export default function App() {
         className="pb-[env(safe-area-inset-bottom,0px)] pt-[env(safe-area-inset-top,0px)]">
         <img src={BHSC_LOGO} alt="BHSC" className="bhsc-logo mb-4 ml-1 mt-1 block h-auto w-[104px]" draggable="false" />
         <nav aria-label="Sections" className="flex flex-col gap-1">
-          {tabs.map(([id, label, Icon]) => (
+          {TABS.map(([id, label, Icon]) => (
             <button key={id} type="button" onClick={() => go(id)} aria-current={tab === id ? "page" : undefined}
               className={cn("press flex items-center gap-3 rounded-[10px] px-3 py-3 text-[17px] font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-tint",
                 tab === id ? "bg-tint-soft text-tint" : "text-label hover:bg-fill")}>
@@ -46,14 +43,10 @@ export default function App() {
         </nav>
       </SideDrawer>
 
-      <div hidden={tab !== "estimate"}><Estimate version={store.version} menu={menu} /></div>
-      <div hidden={tab !== "medicaid"}><Medicaid menu={menu} /></div>
-      {tab === "prices" && store.hosted && (
-        <div className="min-h-screen pb-16">
-          <NavBar title="Price lists" subtitle="Upload a new list or add a model" right={<ThemeButton />} left={menu} />
-          <BlurFade key="prices"><PriceLists store={store} sample={sample} /></BlurFade>
-        </div>
-      )}
+      <div hidden={tab !== "estimate"}><Estimate menu={menu} seed={seed} /></div>
+      {/* Compare stays mounted so the options are still there after a trip to the estimate */}
+      <div hidden={tab !== "compare"}><Compare menu={menu} onUse={(pick) => { setSeed({ ...pick }); go("estimate"); }} /></div>
+      {tab === "haprices" && <BlurFade key="haprices"><HAPrices menu={menu} /></BlurFade>}
     </>
   );
 }
