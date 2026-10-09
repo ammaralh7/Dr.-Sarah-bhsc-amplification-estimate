@@ -639,6 +639,150 @@
    "12 months"
   ]
  ],
+ "addons": {
+  "Phonak": [
+   [
+    "ChargerGo RIC I E",
+    157.0,
+    "1 year"
+   ],
+   [
+    "Charger RIC E",
+    55.0,
+    "1 year"
+   ],
+   [
+    "ChargerGo RICSPH I",
+    157.0,
+    "1 year"
+   ],
+   [
+    "Charger RIC I",
+    55.0,
+    "1 year"
+   ],
+   [
+    "ChargerGo RIC I",
+    157.0,
+    "1 year"
+   ],
+   [
+    "Charger Virto I",
+    99.0,
+    "1 year"
+   ],
+   [
+    "Charger Combi BTE 2",
+    52.99,
+    "1 year"
+   ],
+   [
+    "Roger On 3",
+    888.56,
+    "2 years"
+   ],
+   [
+    "Roger Select 3",
+    750.46,
+    "2 years"
+   ],
+   [
+    "Roger Touchscreen Mic 3",
+    1179.37,
+    "2 years"
+   ],
+   [
+    "Roger Table Mic 3",
+    967.18,
+    "2 years"
+   ],
+   [
+    "Roger Clip-On Mic 1.1",
+    347.26,
+    "2 years"
+   ],
+   [
+    "Roger Pass-around Mic",
+    296.86,
+    "2 years"
+   ],
+   [
+    "Roger Repeater",
+    296.86,
+    "2 years"
+   ],
+   [
+    "Roger Soundfield Touchscreen Mic",
+    362.38,
+    "2 years"
+   ],
+   [
+    "Roger WallPilot",
+    170.86,
+    "2 years"
+   ],
+   [
+    "Roger Charging Rack",
+    32.26,
+    "2 years"
+   ],
+   [
+    "Roger Multimedia Hub",
+    296.86,
+    "2 years"
+   ],
+   [
+    "Roger Installer",
+    106.85,
+    "2 years"
+   ],
+   [
+    "Roger Focus II R",
+    458.14,
+    "2 years"
+   ],
+   [
+    "Roger Focus II-312",
+    402.7,
+    "2 years"
+   ],
+   [
+    "Roger 20 - Pediatric",
+    498.46,
+    "2 years"
+   ],
+   [
+    "Roger 21 - Pediatric",
+    498.46,
+    "2 years"
+   ],
+   [
+    "Roger X - Pediatric",
+    498.46,
+    "2 years"
+   ],
+   [
+    "Roger NeckLoop - Pediatric",
+    407.74,
+    "2 years"
+   ],
+   [
+    "TV Connector D",
+    265.3,
+    "1 year"
+   ],
+   [
+    "PartnerMic",
+    425.0,
+    "1 year"
+   ],
+   [
+    "RemoteControl",
+    224.0,
+    "1 year"
+   ]
+  ]
+ },
  "sources": {
   "ReSound": "ReSound NY Medicaid & Rehab 2026",
   "Phonak": "Phonak NY Medicaid, effective Aug 24 2026",

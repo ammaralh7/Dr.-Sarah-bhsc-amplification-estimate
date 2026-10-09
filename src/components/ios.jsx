@@ -1,8 +1,8 @@
 /* iOS building blocks for the Amplification Estimate, drawn from Apple's Human Interface
    Guidelines: large-title navigation bar, selection tiles (Apple Store configurator),
    bottom sheet, grouped inset lists, switches, search field and the frosted price bar. */
-import { useEffect, useState } from "react";
-import { Check, Moon, Search, Sun, X } from "lucide-react";
+import { useEffect, useId, useState } from "react";
+import { Check, ChevronsUpDown, Moon, Search, Sun, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { BlurFade } from "@/components/ui/blur-fade";
 import { Drawer, DrawerContent } from "@/components/ui/bottom-sheet";
@@ -11,7 +11,7 @@ import logo from "@/assets/bhsc-logo.png";
 export const BHSC_LOGO = logo;
 
 /* ── Navigation bar: large title that condenses into a frosted bar on scroll ── */
-export function NavBar({ title, shortTitle, subtitle, left, right }) {
+export function NavBar({ title, shortTitle, subtitle, left, right, wide }) {
   const [small, setSmall] = useState(false);
   const [solid, setSolid] = useState(false);
   useEffect(() => {
@@ -23,13 +23,13 @@ export function NavBar({ title, shortTitle, subtitle, left, right }) {
     <>
       <div className={cn("fixed inset-x-0 top-0 z-40 transition-[background-color,box-shadow] duration-200", solid ? "material shadow-[0_0.5px_0_var(--sep)]" : "bg-transparent")}
         style={{ paddingTop: "env(safe-area-inset-top, 0px)" }}>
-        <div className="mx-auto flex h-11 max-w-2xl items-center justify-between gap-3 px-4">
+        <div className={cn("mx-auto flex h-11 max-w-2xl items-center justify-between gap-3 px-4", wide === true ? "lg:max-w-6xl" : wide)}>
           <div className="flex min-w-[88px] items-center">{left}</div>
           <div className={cn("truncate text-[17px] font-semibold transition-opacity duration-200", small ? "opacity-100" : "opacity-0")} aria-hidden={!small}>{shortTitle || title}</div>
           <div className="flex min-w-[88px] items-center justify-end">{right}</div>
         </div>
       </div>
-      <header className="mx-auto max-w-2xl px-4 pb-2 pt-[calc(3.25rem+env(safe-area-inset-top,0px))]">
+      <header className={cn("mx-auto max-w-2xl px-4 pb-2 pt-[calc(3.25rem+env(safe-area-inset-top,0px))]", wide === true ? "lg:max-w-6xl" : wide)}>
         <img src={logo} alt="BHSC — Buffalo Hearing & Speech Center. Nurture · Educate · Communicate"
           className="bhsc-logo mb-3 block h-auto w-[112px] select-none" draggable="false" />
         <h1 className="text-[34px] font-bold leading-[1.1] tracking-[-0.02em]">{title}</h1>
@@ -112,6 +112,55 @@ export function Row({ children, className, last, as: As = "div", ...props }) {
   );
 }
 
+/* ── Dropdown row: a native <select> inside a list row, so iPhone/iPad show their own wheel picker ── */
+export function SelectRow({ label, value, onChange, placeholder = "Choose", disabled, last, stacked, children }) {
+  const id = useId();
+  const empty = value == null || value === "";
+  // stacked: small label above a full-width dropdown, for narrow columns (Compare prices)
+  if (stacked) return (
+    <Row last={last} className={disabled ? "opacity-40" : ""}>
+      <span className="flex min-w-0 flex-1 flex-col">
+        <label htmlFor={id} className="text-[13px] text-label2">{label}</label>
+        <span className="relative flex min-w-0 items-center">
+          <select id={id} value={empty ? "" : String(value)} disabled={disabled} onChange={(e) => onChange(e.target.value)}
+            className={cn("w-0 min-w-0 flex-1 cursor-pointer appearance-none truncate rounded-[6px] bg-transparent py-0.5 pr-6 text-[17px] outline-none focus-visible:ring-2 focus-visible:ring-tint disabled:cursor-not-allowed",
+              empty ? "text-label3" : "text-label")}>
+            <option value="" disabled>{placeholder}</option>
+            {children}
+          </select>
+          <ChevronsUpDown className="pointer-events-none absolute right-0 h-4 w-4 text-label3" strokeWidth={2.2} />
+        </span>
+      </span>
+    </Row>
+  );
+  return (
+    <Row last={last} className={disabled ? "opacity-40" : ""}>
+      <label htmlFor={id} className="w-[7.5rem] shrink-0 text-[17px]">{label}</label>
+      <span className="relative flex min-w-0 flex-1 items-center">
+        <select id={id} value={empty ? "" : String(value)} disabled={disabled} onChange={(e) => onChange(e.target.value)}
+          className={cn("w-0 min-w-0 flex-1 cursor-pointer appearance-none truncate rounded-[6px] bg-transparent py-1 pr-6 text-right text-[17px] outline-none [text-align-last:right] focus-visible:ring-2 focus-visible:ring-tint disabled:cursor-not-allowed",
+            empty ? "text-label3" : "text-label2")}>
+          <option value="" disabled>{placeholder}</option>
+          {children}
+        </select>
+        <ChevronsUpDown className="pointer-events-none absolute right-0 h-4 w-4 text-label3" strokeWidth={2.2} />
+      </span>
+    </Row>
+  );
+}
+
+/* ── Text field row (label on the left, entry on the right) ── */
+export function FieldRow({ label, value, onChange, last, ...props }) {
+  const id = useId();
+  return (
+    <Row last={last}>
+      <label htmlFor={id} className="w-[7.5rem] shrink-0 text-[17px]">{label}</label>
+      <input id={id} value={value} onChange={(e) => onChange(e.target.value)} autoComplete="off"
+        className="w-0 min-w-0 flex-1 bg-transparent text-right text-[17px] text-label outline-none placeholder:text-label3" {...props} />
+    </Row>
+  );
+}
+
 /* ── Switch (iOS), as ported in Biladi Ops (21st.dev #21948): pill thumb, tint when on ── */
 export function Switch({ checked, onChange, label }) {
   return (
@@ -157,9 +206,9 @@ export function SheetPinned({ children }) {
 }
 
 /* ── Frosted price bar (Apple Store bag bar) ── */
-export function PriceBar({ label, amount, action }) {
+export function PriceBar({ label, amount, action, className }) {
   return (
-    <div className="material fixed bottom-0 inset-x-0 z-30 shadow-[0_-0.5px_0_var(--sep)]" style={{ paddingBottom: "env(safe-area-inset-bottom, 0px)" }}>
+    <div className={cn("material fixed bottom-0 inset-x-0 z-30 shadow-[0_-0.5px_0_var(--sep)]", className)} style={{ paddingBottom: "env(safe-area-inset-bottom, 0px)" }}>
       <div className="mx-auto flex max-w-2xl items-center justify-between gap-3 px-4 py-3">
         <div className="min-w-0">
           <div className="truncate text-[13px] text-label2">{label}</div>

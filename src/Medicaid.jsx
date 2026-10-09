@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { ChevronRight, Copy, RotateCcw, Search, Info } from "lucide-react";
+import { ChevronRight, Copy, Plus, RotateCcw, Search, Info } from "lucide-react";
 import { NavBar, NavButton, ThemeButton, Section, Tile, Group, Row, SearchField, Sheet, SheetPinned, PriceBar, Capsule, Checkmark } from "@/components/ios";
+import { AccessorySheet, AddonsStep } from "@/components/addons";
 import { SegmentedControl } from "@/components/ui/segmented-control";
 import { UndoPill } from "@/components/ui/undo-pill";
 import { BlurFade } from "@/components/ui/blur-fade";
@@ -8,20 +9,24 @@ import { money, fits, isCros, MFRS, STYLES } from "@/lib/pricing";
 import MED from "@/data/medicaid.json";
 
 /* NY Medicaid estimate: hearing aids at the Medicaid rate (capped at $330 per aid — anything above
-   was left out when the data was built), times two for a pair. Hearing aids only: no fitting, dispensing or earmold fees. */
+   was left out when the data was built), times two for a pair, plus any add-ons at their Medicaid price
+   (Phonak only; the ReSound and Starkey lists have none, so the step is skipped). No fitting, dispensing or earmold fees. */
 const MODELS = MED.models;   // [mfr, name, style label, family, rate, warranty ("" when the list gives none)]
+const accFor = (mfr) => (MED.addons || {})[mfr] || [];   // [[name, Medicaid price, warranty], …]
+const hasAddons = (s) => accFor(s.mfr).length > 0;
 /* "3 years · $0 loss & damage deductible" -> { term: "3 years", extra: "$0 loss & damage deductible" } */
 const warrantyOf = (m) => { const [term = "", ...rest] = (m[5] || "").split(" · "); return { term, extra: rest.join(" · ") }; };
 const BRANDS = MFRS.filter(([n]) => MODELS.some((m) => m[0] === n));
 const CODES = { CIC: ["V5254", "V5258"], IIC: ["V5254", "V5258"], ITC: ["V5255", "V5259"], ITE: ["V5256", "V5260"], BTE: ["V5257", "V5261"], RIC: ["V5257", "V5261"] };
-const ORDER = ["mfr", "n", "style", "model"];
-const LABELS = { mfr: "Manufacturer", n: "Hearing aids", style: "Style", model: "Model" };
-const blank = () => ({ mfr: null, n: null, style: null, model: null, name: "", caseNo: "", code: "" });
+const ORDER = ["mfr", "n", "style", "model", "addons"];
+const LABELS = { mfr: "Manufacturer", n: "Hearing aids", style: "Style", model: "Model", addons: "Add-ons" };
+const blank = () => ({ mfr: null, n: null, style: null, model: null, addons: [], addonsDone: false, name: "", caseNo: "", code: "" });
 const styleAvail = (mfr, st) => MODELS.some((m) => m[0] === mfr && fits(m[3], st));
 const answer = (s, key) => ({
   mfr: s.mfr, n: s.n && (s.n === 2 ? "Two aids" : "One aid"), style: s.style, model: s.model != null && MODELS[s.model][1],
+  addons: !s.addonsDone ? null : s.addons.length ? `${s.addons.length} add-on${s.addons.length > 1 ? "s" : ""}` : "No add-ons",
 })[key];
-const isDone = (s, key) => ({ mfr: !!s.mfr, n: !!s.n, style: !!s.style, model: s.model != null })[key];
+const isDone = (s, key) => ({ mfr: !!s.mfr, n: !!s.n, style: !!s.style, model: s.model != null, addons: s.addonsDone || (!!s.mfr && !hasAddons(s)) })[key];
 const code = (s) => {
   const m = s.model == null ? null : MODELS[s.model];
   if (!m || !s.style) return "";
@@ -32,6 +37,7 @@ function lines(s) {
   const m = s.model == null ? null : MODELS[s.model];
   if (!m || !s.n) return [];
   const out = [{ label: s.n === 2 ? "Hearing aids (pair) · Medicaid rate" : "Hearing aid · Medicaid rate", sub: `${m[0]} ${m[1]} · ${money(m[4])} per aid`, amount: m[4] * s.n }];
+  accFor(s.mfr).forEach(([nm, p]) => { if (s.addons.includes(nm)) out.push({ label: nm, sub: "Add-on · Medicaid price", amount: p }); });
   return out;
 }
 const total = (s) => lines(s).reduce((a, l) => a + l.amount, 0);
@@ -85,7 +91,7 @@ export default function Medicaid({ menu = null }) {
           <div role="radiogroup" className="grid grid-cols-2 gap-2.5">
             {BRANDS.map(([name, color]) => (
               <Tile key={name} selected={s.mfr === name} className="min-h-[56px] flex-row items-center justify-start gap-2.5"
-                onClick={() => set({ mfr: name, model: null, style: s.style && styleAvail(name, s.style) ? s.style : null })}>
+                onClick={() => set({ mfr: name, model: null, addons: [], addonsDone: false, style: s.style && styleAvail(name, s.style) ? s.style : null })}>
                 <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: color }} />
                 <span className="text-[17px] font-semibold">{name}</span>
               </Tile>
@@ -112,6 +118,12 @@ export default function Medicaid({ menu = null }) {
         {shown > 3 && (
           <Section id="model" sectionRef={R("model")} title="Model">
             <Picker s={s} onPick={(i) => set({ model: i, code: "" })} />
+          </Section>
+        )}
+
+        {shown > 4 && hasAddons(s) && (
+          <Section id="addons" sectionRef={R("addons")} title="Add-ons">
+            <AddonsStep s={s} set={set} acc={accFor(s.mfr)} header={`${MED.sources[s.mfr]} · Medicaid prices`} />
           </Section>
         )}
 
@@ -186,6 +198,9 @@ function Receipt({ s, set, onCopy, onReset }) {
   const [fallback, setFallback] = useState("");
   const w = warrantyOf(m);
   const each = s.n === 2 ? "each aid" : "";
+  const acc = accFor(m[0]);
+  const picked = acc.filter(([nm]) => s.addons.includes(nm));
+  const [accOpen, setAccOpen] = useState(false);
   const notes = [];
   if (m[0] === "ReSound") notes.push("ReSound Medicaid orders include free shipping and handling. Mention NY MEDIC when placing custom or BTE orders.");
   if (isCros(m)) notes.push("CROS/BiCROS: bill with contralateral routing codes when dispensed with a hearing aid on the same date.");
@@ -194,6 +209,7 @@ function Receipt({ s, set, onCopy, onReset }) {
     s.name && `Patient: ${s.name}`, s.caseNo && `Medicaid ID: ${s.caseNo}`, `Billing code: ${billing}`, "",
     ...ls.map((l) => `${l.label} (${l.sub}): ${money(l.amount)}`), `TOTAL: ${money(t)}`, "",
     w.term ? `Warranty: ${[w.term, w.extra, each].filter(Boolean).join(", ")}` : `Warranty: not listed on the ${m[0]} Medicaid list; confirm with ${m[0]}`,
+    ...picked.map(([nm, , aw]) => `Warranty, ${nm}: ${aw || "not listed"}`),
   ].filter(Boolean).join("\n");
   const copy = () => { try { navigator.clipboard.writeText(text).then(onCopy, () => setFallback(text)); } catch { setFallback(text); } };
   const field = (key, label, props = {}) => (
@@ -217,16 +233,28 @@ function Receipt({ s, set, onCopy, onReset }) {
             <span className="tnum shrink-0 text-[17px]">{money(l.amount)}</span>
           </Row>
         ))}
+        {acc.length > 0 && (
+          <Row as="button" type="button" onClick={() => setAccOpen(true)} className="active:bg-fill">
+            <Plus className="h-5 w-5 shrink-0 text-tint" strokeWidth={2.4} />
+            <span className="flex-1 text-[17px] text-tint">{s.addons.length ? "Edit accessories" : "Add accessories"}</span>
+          </Row>
+        )}
         <Row last><span className="flex-1 text-[17px] font-semibold">Total</span><span className="tnum text-[17px] font-semibold">{money(t)}</span></Row>
       </Group>
-      <Group header="Warranty" footer={w.term ? `From the ${MED.sources[m[0]]}.` : `${m[0]}'s Medicaid list doesn't give a warranty for this model. Confirm it with ${m[0]}.`}>
-        <Row last>
+      <Group header="Manufacturer warranty" footer={w.term ? `From the ${MED.sources[m[0]]}.` : `${m[0]}'s Medicaid list doesn't give a warranty for this model. Confirm it with ${m[0]}.`}>
+        <Row last={picked.length === 0}>
           <span className="min-w-0 flex-1">
-            <span className="block text-[17px]">Manufacturer warranty</span>
+            <span className="block text-[17px]">{s.n === 2 ? "Hearing aids" : "Hearing aid"}</span>
             {(w.extra || each) && <span className="block text-[13px] text-label2">{[w.extra, each].filter(Boolean).join(" · ")}</span>}
           </span>
           <span className={w.term ? "shrink-0 text-[17px] font-semibold" : "shrink-0 text-[17px] text-label2"}>{w.term || "Not listed"}</span>
         </Row>
+        {picked.map(([nm, , aw], j) => (
+          <Row key={nm} last={j === picked.length - 1}>
+            <span className="min-w-0 flex-1"><span className="block truncate text-[17px]">{nm}</span><span className="block text-[13px] text-label2">Add-on</span></span>
+            <span className={aw ? "shrink-0 text-[17px] font-semibold" : "shrink-0 text-[17px] text-label2"}>{aw || "Not listed"}</span>
+          </Row>
+        ))}
       </Group>
       <Group header="Patient (optional, never saved)">
         {field("name", "Name", { placeholder: "Optional" })}
@@ -246,6 +274,7 @@ function Receipt({ s, set, onCopy, onReset }) {
           <textarea readOnly value={fallback} onFocus={(e) => e.target.select()} autoFocus className="h-44 w-full rounded-[12px] bg-card p-3 text-[15px] text-label outline-none" />
         </div>
       )}
+      <AccessorySheet open={accOpen} onClose={() => setAccOpen(false)} s={s} set={set} acc={acc} header={`${MED.sources[m[0]]} · Medicaid prices`} />
     </div>
   );
 }
