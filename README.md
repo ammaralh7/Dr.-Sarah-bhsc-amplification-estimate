@@ -9,7 +9,7 @@ A hearing-aid pricing website for Dr. Sarah Alhorebi, audiologist at Buffalo Hea
   - **Refund if returned:** works out the refund from BHSC's return policy: the total paid minus what BHSC keeps (5% of the hearing aid charge, 5% of the fitting and dispense codes, and a $200 one-aid or $300 two-aid service fee). *Show the math* opens the line-by-line breakdown: 5% of each fitting and dispense code, 5% of the hearing aids, the fee, total paid and the refund. Returning one side of a pair has no penalty.
   - **CROS/BiCROS:** priced as a one-aid CROS plus a one-aid hearing aid, as the 2026 tier pricing says.
 - **Compare prices:** up to four hearing aids side by side for one patient, with the cheapest marked and how much more the others cost. *Use in estimate* opens the Estimate with the one the patient picks.
-- **2026 HA prices:** every hearing aid on the 2026 lists with its tier and the patient price for one aid and two, plus the tier and fee table.
+- **2026 HA prices:** every hearing aid on the current 2026 lists with its tier and BHSC's net price from the manufacturer's price list, one manufacturer at a time (with style buttons and a search across all four). Each model is listed once, with styles that share a price on one line, in two columns on a computer. A copy built without the confidential cost file shows the tiers only.
 
 It is one self-contained HTML file with no server, logins or outside services. It's built mainly for a computer and also works on phones and iPads, in light or dark mode.
 
