@@ -232,11 +232,11 @@ function Refund({ s }) {
       </Group>
       <details className="group text-[12px] leading-snug text-label2">
         <summary className="cursor-pointer select-none px-4 font-semibold text-tint marker:content-none">
-          <span className="group-open:hidden">More about returns{r.other > 0 ? " (shipping, earmolds, accessories, insurance)" : " (insurance, exchanges)"}</span>
+          <span className="group-open:hidden">More about returns (insurance, exchanges)</span>
           <span className="hidden group-open:inline">Hide</span>
         </summary>
       <ul className="mt-1.5 grid list-disc gap-1 pl-5">
-        {r.other > 0 && <li>Shipping, earmolds and accessories ({money(r.other)}) aren’t covered by the return policy. Check with billing.</li>}
+        <li>BHSC keeps only the 5%s and the service fee; everything else the patient paid is refunded.</li>
         <li>If insurance paid for any codes, billing returns 100% of the insurance payment to the insurance. The refund comes out of what the patient paid.</li>
         <li>Exchanges: no service fee and no 5%. The patient pays only the difference in hearing aid price. A second exchange is treated as a return plus a new sale.</li>
         <li>Not for TruHearing / Start Hearing programs or Medicaid. Billing completes the return worksheet.</li>

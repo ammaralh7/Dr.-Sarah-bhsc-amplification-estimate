@@ -87,9 +87,10 @@ export function quoteLines(s) {
 export const quoteTotal = (s) => Math.round(quoteLines(s).reduce((a, l) => a + l.amount, 0) * 100) / 100;
 
 /* Returns — BHSC "Private Pay & Non-MCD Insurance Hearing Aid Return Process" (effective 10/29/2024).
-   Full return: BHSC keeps 5% of the hearing aid charge, 5% of each service code (fitting/dispense)
-   and a service fee of $200 (one aid) or $300 (two). One side of a pair: no penalty — the order is
-   simply re-priced as one aid. Shipping, earmolds and accessories aren't covered by the policy. */
+   Full return: the patient gets back the total paid minus what BHSC keeps: 5% of the hearing aid
+   charge, 5% of each service code (92641/92594, V5011, V5020, dispense = the fitting fee) and a
+   service fee of $200 (one aid) or $300 (two). One side of a pair: no penalty — the order is
+   simply re-priced as one aid. */
 export const RETURN_KEEP = 0.05;
 export const SERVICE_FEE = [200, 300];
 const r2 = (n) => Math.round(n * 100) / 100;
@@ -106,12 +107,15 @@ export function refund(s, mode = "all") {
   let back;
   if (mode === "all") {
     const keepAid = r2(aidPaid * RETURN_KEEP), keepFit = r2(fitPaid * RETURN_KEEP), fee = SERVICE_FEE[k];
+    // The patient gets back everything they paid except what BHSC keeps (matches BHSC's own worksheet).
     rows.push({ label: s.n === 2 ? "Hearing aids paid" : "Hearing aid paid", amount: aidPaid });
     if (fitPaid) rows.push({ label: "Fitting, orientation & dispense paid", amount: fitPaid });
+    const extras = [s.incl === "all" && "shipping & handling", s.molds && (s.molds === 2 ? "earmolds" : "earmold"), s.addons.length && (s.addons.length > 1 ? "accessories" : "accessory")].filter(Boolean);
+    if (other) rows.push({ label: `${extras.join(", ").replace(/^./, (c) => c.toUpperCase())} paid`, amount: r2(other) });
     rows.push({ label: "BHSC keeps 5% of the hearing aid charge", amount: -keepAid });
     if (fitPaid) rows.push({ label: "BHSC keeps 5% of the fitting & dispense charge", amount: -keepFit });
     rows.push({ label: `Service fee · ${s.n === 2 ? "two aids" : "one aid"} returned`, amount: -fee });
-    back = r2(aidPaid + fitPaid - keepAid - keepFit - fee);
+    back = r2(aidPaid + fitPaid + other - keepAid - keepFit - fee);
   } else {
     // Keep one aid: re-price as a single aid, no service fee and no 5%.
     const kept = mode === "one" ? ears[0] : mode === "right" ? ears[1] : ears[0];
