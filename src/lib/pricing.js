@@ -18,6 +18,7 @@ export const FAMILIES = ["RIC", "BTE", "ITE", "ITC", "CIC", "IIC", "CUSTOM", "AL
 
 export const findModel = (mfr, name, style) => MODELS.findIndex((m) => modelKey(m[0], m[1], m[2]) === modelKey(mfr, name, style));
 export const ADDONS = data.addons;
+export const PRICE_LISTS = data.lists || {};
 export const TIERS = {1:[410,800],2:[515,1025],3:[615,1230],4:[760,1515],5:[900,1790],6:[1055,2210],7:[1230,2465],8:[1395,2780],9:[1650,3300],10:[1870,3850],11:[2015,4025]};
 export const FEES = { fit: [595, 845], ship: 25, molds: [0, 115, 215] };
 export const MFRS = [["ReSound", "var(--resound)"], ["Phonak", "var(--phonak)"], ["Oticon", "var(--oticon)"], ["Starkey", "var(--starkey)"]];
@@ -32,6 +33,12 @@ export const fits = (fam, st) => fam === st || fam === "ALL" || (fam === "CUSTOM
 export const isCros = (m) => /CROS/i.test(m[1]);
 export const styleAvailable = (mfr, st) => MODELS.some((m) => m[0] === mfr && fits(m[3], st));
 export const modelsFor = (mfr, st) => MODELS.map((m, i) => [m, i]).filter(([m]) => m[0] === mfr && fits(m[3], st));
+
+/* Included with every price: up to 4 follow-up visits in the first year (2026 tier pricing). Tiers 7–11
+   also include the LACE AI program (BHSC handover: "LACE AI is included in tiers 7–11"). */
+export const LACE_FROM_TIER = 7;
+export const hasLace = (tiers) => tiers.some((t) => t >= LACE_FROM_TIER);
+export const includedText = (tiers) => `Includes up to 4 follow-up visits in the first year${hasLace(tiers) ? " and the LACE AI program" : ""}.`;
 
 /* Accessories: patient price = BHSC cost × 1.2, to the cent. */
 export const ACCESSORY_MARKUP = 1.2;

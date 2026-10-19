@@ -7,6 +7,7 @@ import { UndoPill } from "@/components/ui/undo-pill";
 import { BlurFade } from "@/components/ui/blur-fade";
 import { money, fits, isCros, MFRS, STYLES } from "@/lib/pricing";
 import MED from "@/data/medicaid.json";
+import { copyText } from "@/lib/copy";
 
 /* NY Medicaid estimate: hearing aids at the Medicaid rate (capped at $330 per aid — anything above
    was left out when the data was built), times two for a pair, plus any add-ons at their Medicaid price
@@ -211,7 +212,7 @@ function Receipt({ s, set, onCopy, onReset }) {
     w.term ? `Warranty: ${[w.term, w.extra, each].filter(Boolean).join(", ")}` : `Warranty: not listed on the ${m[0]} Medicaid list; confirm with ${m[0]}`,
     ...picked.map(([nm, , aw]) => `Warranty, ${nm}: ${aw || "not listed"}`),
   ].filter(Boolean).join("\n");
-  const copy = () => { try { navigator.clipboard.writeText(text).then(onCopy, () => setFallback(text)); } catch { setFallback(text); } };
+  const copy = () => copyText(text).then((ok) => (ok ? onCopy() : setFallback(text)));
   const field = (key, label, props = {}) => (
     <Row last={key === "code"}>
       <label htmlFor={`m-${key}`} className="w-[7rem] shrink-0 text-[17px]">{label}</label>

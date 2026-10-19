@@ -1,13 +1,15 @@
 import { useEffect, useRef, useState } from "react";
-import { ChevronRight, Copy, Plus, RotateCcw, TriangleAlert, X } from "lucide-react";
-import { NavBar, NavButton, ThemeButton, Group, Row, Switch, Sheet, PriceBar, Capsule, Pills, FieldRow } from "@/components/ios";
+import { createPortal } from "react-dom";
+import { ChevronRight, Copy, Plus, Printer, RotateCcw, TriangleAlert, X } from "lucide-react";
+import { NavBar, NavButton, ThemeButton, Group, Row, Switch, Sheet, PriceBar, Capsule, Pills, FieldRow, BHSC_LOGO } from "@/components/ios";
 import { UndoPill } from "@/components/ui/undo-pill";
 import { EarOrder, blankEar } from "@/components/order";
 import { cn } from "@/lib/utils";
 import {
   MODELS, ADDONS, TIERS, FEES, MFRS, STYLES, money, fits, isCros, styleAvailable, modelsFor, billingCode, quoteLines, quoteTotal, modelKey,
-  EAR_NAMES, mixed, earsInUse, earModel, orderReady, orderMfrs, accessoriesFor, accessoryPrice, earPrice, MIXED_CONFIRMED, refund, crosPair,
+  EAR_NAMES, mixed, earsInUse, earModel, orderReady, orderMfrs, accessoriesFor, accessoryPrice, earPrice, MIXED_CONFIRMED, refund, crosPair, includedText,
 } from "@/lib/pricing";
+import { copyText } from "@/lib/copy";
 
 // One page, laid out for a computer: the order at the top, the estimate and refund under it, updating as it is filled in.
 const blank = () => ({ n: null, same: true, ears: [blankEar(), blankEar()], incl: "all", molds: 0, addons: [], moldEar: "R", notes: "", caseNo: "", code: "" });
@@ -147,9 +149,9 @@ function Receipt({ s, set, onCopy, onReset }) {
     "Buffalo Hearing & Speech Center — amplification estimate", `Date: ${date}`,
     s.caseNo ? `Case #: ${s.caseNo}` : null, `Billing code: ${code}`, s.notes.trim() ? `Notes: ${s.notes.trim()}` : null, "",
     ...lines.map((l) => `${l.label}${l.sub ? ` (${l.sub})` : ""}: ${money(l.amount)}`),
-    `TOTAL: ${money(total)}`, "", "Includes up to 4 follow-up visits in the first year.",
+    `TOTAL: ${money(total)}`, "", includedText(ms.map((m) => m[4])),
   ].filter((x) => x != null).join("\n");
-  const copy = () => { try { navigator.clipboard.writeText(text).then(onCopy, () => setFallback(text)); } catch { setFallback(text); } };
+  const copy = () => copyText(text).then((ok) => (ok ? onCopy() : setFallback(text)));
 
   return (
     <div className="grid min-w-0 grid-cols-1 gap-3">
@@ -174,7 +176,7 @@ function Receipt({ s, set, onCopy, onReset }) {
         </Row>
       </Group>
 
-      <Group header="Notes & billing (never saved)" footer="Includes up to 4 follow-up visits in the first year.">
+      <Group header="Notes & billing (never saved)" footer={includedText(ms.map((m) => m[4]))}>
         <div className="bg-card pl-4">
           <div className="hairline grid min-h-[36px] grid-cols-2 items-center gap-4 py-1 pr-4">
             <label className="flex min-w-0 items-center gap-3 text-[15px]"><span className="shrink-0">Case #</span>
@@ -200,14 +202,44 @@ function Receipt({ s, set, onCopy, onReset }) {
 
       <div className="flex flex-wrap gap-2">
         <Capsule className="h-10 px-4 text-[15px]" onClick={copy}><Copy className="h-4 w-4" strokeWidth={2.4} />Copy estimate</Capsule>
+        <Capsule className="h-10 px-4 text-[15px]" variant="tinted" onClick={() => window.print()}><Printer className="h-4 w-4" strokeWidth={2.4} />Print</Capsule>
         <Capsule className="h-10 px-4 text-[15px]" variant="tinted" onClick={onReset}><RotateCcw className="h-4 w-4" strokeWidth={2.4} />New patient</Capsule>
       </div>
+      {createPortal(<PrintSheet lines={lines} total={total} code={code} date={date} what={what} s={s} included={includedText(ms.map((m) => m[4]))} />, document.body)}
       {fallback && (
         <div className="grid gap-2">
           <p className="text-[13px] text-label2">Copying isn’t allowed here. Select the text below and copy it.</p>
           <textarea readOnly value={fallback} onFocus={(e) => e.target.select()} autoFocus className="h-44 w-full rounded-[12px] bg-card p-3 text-[15px] text-label outline-none" />
         </div>
       )}
+    </div>
+  );
+}
+
+/* What Print puts on paper: only this sheet (see "@media print" in index.css). The patient's estimate
+   only: no refund section, no BHSC costs, always black on white. */
+function PrintSheet({ lines, total, code, date, what, s, included }) {
+  return (
+    <div id="print-estimate" aria-hidden="true">
+      <div className="flex items-center justify-between border-b border-black/20 pb-3">
+        <img src={BHSC_LOGO} alt="BHSC" className="h-auto w-[120px]" />
+        <div className="text-right text-[10pt] leading-snug">Buffalo Hearing &amp; Speech Center<br />{date}</div>
+      </div>
+      <h1 className="mt-5 text-[18pt] font-bold">Hearing aid estimate</h1>
+      <p className="text-[10.5pt]">{what}{s.caseNo ? ` · Case # ${s.caseNo}` : ""}{code ? ` · Billing code ${code}` : ""}</p>
+      <table className="mt-4 w-full border-collapse text-[11pt]">
+        <tbody>
+          {lines.map((l, j) => (
+            <tr key={j} className="border-b border-black/15">
+              <td className="py-1.5 pr-4">{l.label}{l.sub && <span className="text-[9.5pt] text-black/60"> · {l.sub}</span>}</td>
+              <td className="py-1.5 text-right tabular-nums">{money(l.amount)}</td>
+            </tr>
+          ))}
+          <tr><td className="pt-2.5 text-[12pt] font-bold">Total</td><td className="pt-2.5 text-right text-[12pt] font-bold tabular-nums">{money(total)}</td></tr>
+        </tbody>
+      </table>
+      {s.notes.trim() && <div className="mt-5 text-[10.5pt]"><div className="font-semibold">Notes</div><div className="whitespace-pre-wrap">{s.notes.trim()}</div></div>}
+      <p className="mt-6 text-[9.5pt] text-black/70">{included} This is an estimate; final charges are confirmed at dispense.</p>
     </div>
   );
 }
