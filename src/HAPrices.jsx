@@ -1,88 +1,99 @@
 import { useMemo, useState } from "react";
-import { NavBar, ThemeButton, Group, Row, Switch, SearchField } from "@/components/ios";
-import { SegmentedControl } from "@/components/ui/segmented-control";
-import { MODELS, TIERS, FEES, MFRS, HAS_COSTS, money } from "@/lib/pricing";
+import { NavBar, ThemeButton, SearchField, Pills } from "@/components/ios";
+import { MODELS, MFRS, HAS_COSTS } from "@/lib/pricing";
 
-// Every hearing aid on the 2026 lists: BHSC cost, tier, and the patient price for one aid and for two.
+// Every hearing aid on the current 2026 lists with its tier and BHSC's net price (the "net price" /
+// account price on the manufacturer's price list, per aid). One manufacturer at a time, each model
+// once with its styles under it, in two columns on a computer. Searching looks across all four.
+const usd = (n) => "$" + n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const famGroup = (f) => (["ITE", "ITC", "CIC", "IIC", "CUSTOM"].includes(f) ? "Custom" : f === "ALL" ? null : f);
+// "RIC · rechargeable" → "RIC rechargeable"; several styles read "miniRITE R, miniBTE R"
+const styleText = (styles) => styles.map((x) => x.replace(/^All styles · one price per level$/, "All styles").replace(/ · /g, " ")).join(", ");
+const byName = (list) => {
+  const g = new Map();
+  list.forEach((m) => { if (!g.has(m[1])) g.set(m[1], []); g.get(m[1]).push(m); });
+  return [...g];
+};
+
 export default function HAPrices({ menu = null }) {
   const [q, setQ] = useState("");
-  const [mfr, setMfr] = useState("All");
-  const [costOn, setShowCost] = useState(true);
-  const showCost = HAS_COSTS && costOn;
+  const [mfr, setMfr] = useState(MFRS[0][0]);
+  const [style, setStyle] = useState("all");
   const words = q.trim().toLowerCase().split(/\s+/).filter(Boolean);
-  const groups = useMemo(() => MFRS.map(([name]) => name).filter((name) => mfr === "All" || mfr === name).map((name) => [
-    name,
-    MODELS.filter((m) => m[0] === name && !m[5] && words.every((w) => `${m[1]} ${m[2]} tier ${m[4]}`.toLowerCase().includes(w))),
-  ]).filter(([, rows]) => rows.length), [mfr, q]); // eslint-disable-line react-hooks/exhaustive-deps
-  const count = groups.reduce((a, [, r]) => a + r.length, 0);
+  const searching = words.length > 0;
+  const current = useMemo(() => MODELS.filter((m) => !m[5]), []);
+  const styles = useMemo(() => [...new Set(current.filter((m) => m[0] === mfr).map((m) => famGroup(m[3])).filter(Boolean))], [current, mfr]);
+  const st = styles.includes(style) ? style : "all";
+  const rows = current.filter((m) => (searching
+    ? words.every((w) => `${m[0]} ${m[1]} ${m[2]} tier ${m[4]}`.toLowerCase().includes(w))
+    : m[0] === mfr && (st === "all" || famGroup(m[3]) === st)));
+  const brands = searching ? MFRS.map(([n]) => n).filter((n) => rows.some((m) => m[0] === n)) : [mfr];
 
   return (
     <div className="min-h-screen pb-16">
-      <NavBar wide="lg:max-w-4xl" compact title="2026 HA prices" subtitle="Every hearing aid, its tier and price" left={menu} right={<ThemeButton />} />
-      <main className="mx-auto grid max-w-2xl grid-cols-1 gap-7 px-4 pt-4 lg:max-w-4xl">
-        <div className="grid gap-3">
-          <SearchField value={q} onChange={setQ} placeholder="Search models, styles or “tier 5”" />
-          <SegmentedControl label="Manufacturer" value={mfr} onValueChange={setMfr}
-            options={["All", ...MFRS.map(([n]) => n)].map((n) => ({ value: n, label: n }))} />
-          {HAS_COSTS && (
-            <Group>
-              <Row last>
-                <span className="flex-1 text-[17px]">Show BHSC cost</span>
-                <Switch label="Show BHSC cost" checked={costOn} onChange={setShowCost} />
-              </Row>
-            </Group>
+      <NavBar wide compact title="2026 HA prices" subtitle={HAS_COSTS ? "BHSC's net price for every hearing aid on the 2026 lists" : "Every hearing aid on the 2026 lists and its tier"} left={menu} right={<ThemeButton />} />
+      <main className="mx-auto grid max-w-2xl grid-cols-1 gap-4 px-4 pt-3 lg:max-w-6xl">
+        <div className="flex min-w-0 flex-wrap items-center gap-x-5 gap-y-2.5 rounded-[12px] bg-card px-4 py-2.5">
+          <div className="w-full sm:w-72"><SearchField value={q} onChange={setQ} placeholder="Search all models" /></div>
+          <Pills label="Manufacturer" value={searching ? "" : mfr} onChange={(v) => { setMfr(v); setStyle("all"); setQ(""); }}
+            options={MFRS.map(([n]) => ({ value: n, label: n }))} />
+          {!searching && styles.length > 1 && (
+            <Pills label="Style" value={st} onChange={setStyle}
+              options={[{ value: "all", label: "All" }, ...styles.map((s) => ({ value: s, label: s }))]} />
           )}
         </div>
 
-        <TierTable />
+        <p className="-mb-1 px-1 text-[13px] text-label2">
+          {HAS_COSTS ? "BHSC net price per aid, from the manufacturer's price list." : "Tiers only: BHSC's net prices are kept out of this copy of the app."}
+          {" "}{rows.length} {rows.length === 1 ? "style" : "styles"}{searching ? ` matching “${q.trim()}”` : ""}.
+        </p>
 
-        {groups.map(([name, rows]) => (
-          <Group key={name} header={`${name} · ${rows.length} model${rows.length === 1 ? "" : "s"}`}>
-            <div className="hairline hidden grid-cols-[1fr_auto] gap-3 bg-card px-4 py-2 text-[12px] font-semibold uppercase tracking-[0.02em] text-label2 sm:grid">
-              <span>Model</span>
-              <span className={`grid ${showCost ? "grid-cols-3" : "grid-cols-2"} gap-3 text-right [&>*]:w-[4.75rem]`}>
-                {showCost && <span>BHSC cost</span>}<span>One aid</span><span>Two aids</span>
-              </span>
+        {brands.map((b) => (
+          <section key={b} aria-label={b} className="grid min-w-0 grid-cols-1 gap-1.5">
+            {searching && <h2 className="px-1 text-[13px] font-semibold uppercase tracking-[0.03em] text-label2">{b}</h2>}
+            <div className="min-w-0 rounded-[12px] bg-card px-4 py-1 lg:columns-2 lg:gap-10">
+              {byName(rows.filter((m) => m[0] === b)).map(([name, ms]) => <ModelRow key={name} name={name} ms={ms} />)}
             </div>
-            {rows.map((m, j) => (
-              <Row key={`${m[1]}-${m[2]}-${j}`} last={j === rows.length - 1}>
-                <div className="flex min-w-0 flex-1 flex-col gap-1.5 sm:flex-row sm:items-center sm:gap-3">
-                  <span className="min-w-0 flex-1">
-                    <span className="block text-[16px] leading-snug">{m[1]}</span>
-                    <span className="block text-[13px] text-label2">{m[2]} · Tier {m[4]}</span>
-                  </span>
-                  <span className={`tnum grid shrink-0 ${showCost ? "grid-cols-3" : "grid-cols-2"} gap-3 text-[15px] sm:text-right sm:[&>*]:w-[4.75rem]`}>
-                    {showCost && <Price label="BHSC cost" muted>{m[7] ? money(m[7]) : "—"}</Price>}
-                    <Price label="One aid">{money(TIERS[m[4]][0])}</Price>
-                    <Price label="Two aids">{money(TIERS[m[4]][1])}</Price>
-                  </span>
-                </div>
-              </Row>
-            ))}
-          </Group>
+          </section>
         ))}
-        {!count && <p className="py-10 text-center text-[15px] text-label2">No models match “{q}”.</p>}
+        {!rows.length && <p className="py-10 text-center text-[15px] text-label2">No models match “{q}”.</p>}
       </main>
     </div>
   );
 }
 
-const Price = ({ label, muted, children }) => (
-  <span className={muted ? "text-label2" : ""}><span className="block text-[11px] text-label2 sm:hidden">{label}</span>{children}</span>
-);
-
-/* BHSC 2026 tier prices and fees, for reference. */
-function TierTable() {
-  return (
-    <Group header="2026 tier prices" footer={`Fitting, orientation & dispense ${money(FEES.fit[0])} one aid / ${money(FEES.fit[1])} two · Shipping ${money(FEES.ship)} · Earmolds ${money(FEES.molds[1])} one / ${money(FEES.molds[2])} two`}>
-      <div className="hairline grid grid-cols-3 bg-card px-4 py-2 text-[12px] font-semibold uppercase tracking-[0.02em] text-label2">
-        <span>Tier</span><span className="text-right">One aid</span><span className="text-right">Two aids</span>
+/* One model: styles with the same tier and price share a line ("miniRITE R · miniBTE R"); a model
+   with one such line is a single row, otherwise its name with a short line per price. */
+function ModelRow({ name, ms }) {
+  const lines = [];
+  ms.forEach((m) => {
+    const hit = lines.find((l) => l.tier === m[4] && l.cost === m[7]);
+    if (hit) hit.styles.push(m[2]); else lines.push({ tier: m[4], cost: m[7], styles: [m[2]] });
+  });
+  const tail = (l) => (
+    <>
+      <span className="w-14 shrink-0 text-right text-[13px] text-label2">Tier {l.tier}</span>
+      {HAS_COSTS && <span className="tnum w-[5.5rem] shrink-0 text-right font-semibold">{l.cost != null ? usd(l.cost) : "—"}</span>}
+    </>
+  );
+  if (lines.length === 1) {
+    const l = lines[0];
+    return (
+      <div className="flex min-w-0 break-inside-avoid items-baseline gap-3 border-b border-sep py-1.5 text-[14px]">
+        <span className="min-w-0 flex-1 truncate" title={styleText(l.styles)}><span className="text-[15px] font-semibold">{name}</span> <span className="text-label2">· {styleText(l.styles)}</span></span>
+        {tail(l)}
       </div>
-      {Object.entries(TIERS).map(([t, [one, two]], j, a) => (
-        <div key={t} className={`tnum grid grid-cols-3 bg-card px-4 py-2 text-[15px] ${j < a.length - 1 ? "hairline" : ""}`}>
-          <span>Tier {t}</span><span className="text-right">{money(one)}</span><span className="text-right">{money(two)}</span>
+    );
+  }
+  return (
+    <div className="break-inside-avoid border-b border-sep py-1.5 text-[14px]">
+      <div className="text-[15px] font-semibold">{name}</div>
+      {lines.map((l) => (
+        <div key={l.styles[0]} className="flex min-w-0 items-baseline gap-3 py-px pl-3">
+          <span className="min-w-0 flex-1 truncate text-label2" title={styleText(l.styles)}>{styleText(l.styles)}</span>
+          {tail(l)}
         </div>
       ))}
-    </Group>
+    </div>
   );
 }
