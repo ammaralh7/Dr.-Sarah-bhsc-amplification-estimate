@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Copy, Plus, RotateCcw, TriangleAlert, X } from "lucide-react";
+import { ChevronRight, Copy, Plus, RotateCcw, TriangleAlert, X } from "lucide-react";
 import { NavBar, NavButton, ThemeButton, Group, Row, Switch, Sheet, PriceBar, Capsule, Pills, FieldRow } from "@/components/ios";
 import { UndoPill } from "@/components/ui/undo-pill";
 import { EarOrder, blankEar } from "@/components/order";
@@ -10,7 +10,7 @@ import {
 } from "@/lib/pricing";
 
 // One page, laid out for a computer: the order at the top, the estimate and refund under it, updating as it is filled in.
-const blank = () => ({ n: null, same: true, ears: [blankEar(), blankEar()], incl: "all", molds: 0, addons: [], notes: "", caseNo: "", code: "" });
+const blank = () => ({ n: null, same: true, ears: [blankEar(), blankEar()], incl: "all", molds: 0, addons: [], moldEar: "R", notes: "", caseNo: "", code: "" });
 
 export default function Estimate({ menu = null, seed = null }) {
   const [s, setS] = useState(blank);
@@ -44,7 +44,7 @@ export default function Estimate({ menu = null, seed = null }) {
           (Right | Left ear side by side when they differ), accessories, then the estimate and refund. */}
       <main className="mx-auto grid max-w-2xl grid-cols-1 gap-4 px-4 pt-3 lg:max-w-6xl">
         <div role="group" aria-label="Order" className="flex min-w-0 flex-wrap items-center gap-x-5 gap-y-2.5 rounded-[12px] bg-card px-4 py-2.5">
-          <Pills label="Hearing aids" value={s.n} onChange={(v) => set({ n: +v, code: "" })}
+          <Pills label="Hearing aids" value={s.n} onChange={(v) => set({ n: +v, code: "", molds: +v === 1 && s.molds === 2 ? 1 : s.molds })}
             options={[{ value: 1, label: "One aid" }, { value: 2, label: "Two aids" }]} />
           {s.n === 2 && (
             <label className="flex cursor-pointer items-center gap-2.5 text-[15px]">
@@ -55,8 +55,22 @@ export default function Estimate({ menu = null, seed = null }) {
           )}
           <Pills label="Included" value={s.incl} onChange={(v) => set({ incl: v })}
             options={[{ value: "all", label: "Everything", title: "Hearing aid + fitting, orientation & dispense + shipping" }, { value: "aid", label: "Aid only" }]} />
-          <Pills label="Earmolds" value={s.molds} onChange={(v) => set({ molds: +v })}
-            options={[{ value: 0, label: "None" }, { value: 1, label: `One · ${money(FEES.molds[1])}` }, { value: 2, label: `Two · ${money(FEES.molds[2])}` }]} />
+          {/* Second line, under "Same aid in both ears": earmolds, and whether both ears need one */}
+          <div className="basis-full" aria-hidden="true" />
+          <label className="flex cursor-pointer items-center gap-2.5 text-[15px]">
+            <Switch label="Earmolds" checked={s.molds > 0} onChange={(on) => set({ molds: on ? (s.n === 2 ? 2 : 1) : 0 })} />
+            Earmolds{s.molds > 0 && <span className="tnum text-label2">{money(FEES.molds[s.molds])}</span>}
+          </label>
+          {s.n === 2 && s.molds > 0 && (
+            <label className="flex cursor-pointer items-center gap-2.5 text-[15px]">
+              <Switch label="Earmolds in both ears" checked={s.molds === 2} onChange={(on) => set({ molds: on ? 2 : 1 })} />
+              Earmolds in both ears
+            </label>
+          )}
+          {s.n === 2 && s.molds === 1 && (
+            <Pills label="Earmold for" value={s.moldEar} onChange={(v) => set({ moldEar: v })}
+              options={[{ value: "R", label: "Right ear" }, { value: "L", label: "Left ear" }]} />
+          )}
         </div>
 
         {twoEars ? (
@@ -230,6 +244,7 @@ function Refund({ s }) {
           <span className="tnum text-[15px] font-semibold text-tint">{money(r.refund)}</span>
         </Row>
       </Group>
+      {r.math && <RefundMath m={r.math} pair={s.n === 2} />}
       <details className="group text-[12px] leading-snug text-label2">
         <summary className="cursor-pointer select-none px-4 font-semibold text-tint marker:content-none">
           <span className="group-open:hidden">More about returns (insurance, exchanges)</span>
@@ -243,6 +258,36 @@ function Refund({ s }) {
       </ul>
       </details>
     </div>
+  );
+}
+
+/* "Show the math": the refund worked out line by line, the way BHSC's billing does it by hand. */
+function RefundMath({ m, pair }) {
+  const usd = (n) => "$" + n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const Line = ({ label, value, strong, total, top }) => (
+    <div className={cn("flex items-baseline justify-between gap-4 py-0.5", top && "mt-1 border-t border-sep pt-1.5", strong && "font-semibold")}>
+      <span className="min-w-0">{label}</span>
+      <span className={cn("tnum shrink-0", total && "text-tint")}>{value}</span>
+    </div>
+  );
+  return (
+    <details className="group/math">
+      <summary className="inline-flex cursor-pointer select-none items-center gap-1 rounded-[6px] px-3 text-[13px] font-semibold text-tint marker:content-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-tint [&::-webkit-details-marker]:hidden">
+        <ChevronRight className="h-4 w-4 transition-transform duration-200 group-open/math:rotate-90" strokeWidth={2.6} />
+        <span className="group-open/math:hidden">Show the math</span><span className="hidden group-open/math:inline">Hide the math</span>
+      </summary>
+      <div className="mt-2 rounded-[12px] bg-card px-4 py-3 text-[14px] leading-snug">
+        <div className="mb-1 text-[12px] font-semibold uppercase tracking-[0.03em] text-label2">5% of the following</div>
+        {m.codes.map((c) => <Line key={c.code} label={<>{c.code} <span className="text-label2">· {c.name} ({usd(c.charge)})</span></>} value={usd(c.keep)} />)}
+        {m.codes.length > 0 && <Line label={<span className="text-label2">Fitting & dispense codes</span>} value={usd(m.keepFit)} top />}
+        <Line label={<>5% of {pair ? "hearing aids" : "hearing aid"} <span className="text-label2">({usd(m.aidPaid)})</span></>} value={usd(m.keepAid)} top={m.codes.length > 0} />
+        <Line label="Total 5% kept" value={usd(m.keep5)} strong top />
+        <Line label={<>+ Service fee <span className="text-label2">({pair ? "two aids" : "one aid"} returned)</span></>} value={usd(m.fee)} />
+        <Line label="BHSC keeps" value={usd(m.kept)} strong top />
+        <Line label="Total paid" value={usd(m.paid)} top />
+        <Line label="Refund to patient (total paid − BHSC keeps)" value={usd(m.paid - m.kept)} strong total />
+      </div>
+    </details>
   );
 }
 

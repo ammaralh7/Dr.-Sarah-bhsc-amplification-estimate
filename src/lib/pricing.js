@@ -79,7 +79,7 @@ export function quoteLines(s) {
     out.push({ label: "Fitting, orientation & dispense", sub: s.n === 2 ? "Two aids" : "One aid", amount: FEES.fit[k] });
     out.push({ label: "Shipping & handling", sub: "", amount: FEES.ship });
   }
-  if (s.molds) out.push({ label: s.molds === 2 ? "Earmolds (two)" : "Earmold (one)", sub: "", amount: FEES.molds[s.molds] });
+  if (s.molds) out.push({ label: s.molds === 2 ? "Earmolds (two)" : s.n === 2 ? `Earmold (${s.moldEar === "L" ? "left" : "right"} ear)` : "Earmold (one)", sub: "", amount: FEES.molds[s.molds] });
   // Patient-facing: never show BHSC cost here (the estimate is copied for patients).
   s.addons.forEach((a) => out.push({ label: a.name, sub: "Accessory", amount: a.price }));
   return out;
@@ -92,6 +92,11 @@ export const quoteTotal = (s) => Math.round(quoteLines(s).reduce((a, l) => a + l
    service fee of $200 (one aid) or $300 (two). One side of a pair: no penalty — the order is
    simply re-priced as one aid. */
 export const RETURN_KEEP = 0.05;
+/* The fitting, orientation & dispense fee by code (BHSC Hearing Aid Fitting, Orientation and Purchase
+   Agreement): $595 one aid / $845 two = these three + the dispense code ($250 / $500). */
+export const FIT_CODES = [["V5020", "Conformity evaluation", 130], ["V5011", "Fitting, orientation & checking", 160], ["92594", "Electroacoustic evaluation", 55]];
+const DISPENSE = [[["V5241", "Monaural dispense"], ["V5200", "Contralateral monaural dispense"]], [["V5160", "Binaural dispense"], ["V5240", "Contralateral binaural dispense"]]];
+const DISPENSE_FEE = [250, 500];
 export const SERVICE_FEE = [200, 300];
 const r2 = (n) => Math.round(n * 100) / 100;
 
@@ -104,9 +109,12 @@ export function refund(s, mode = "all") {
   const fitPaid = s.incl === "all" ? FEES.fit[k] : 0;
   const other = (s.incl === "all" ? FEES.ship : 0) + (FEES.molds[s.molds] || 0) + s.addons.reduce((a, x) => a + x.price, 0);
   const rows = [];
-  let back;
+  let back, math = null;
   if (mode === "all") {
-    const keepAid = r2(aidPaid * RETURN_KEEP), keepFit = r2(fitPaid * RETURN_KEEP), fee = SERVICE_FEE[k];
+    // 5% of each fitting/dispense code (adds up to 5% of the fitting fee) and 5% of the hearing aids
+    const disp = DISPENSE[k][ears.some(isCros) ? 1 : 0];
+    const codes = fitPaid ? [...FIT_CODES, [disp[0], disp[1], DISPENSE_FEE[k]]].map(([code, name, charge]) => ({ code, name, charge, keep: r2(charge * RETURN_KEEP) })) : [];
+    const keepAid = r2(aidPaid * RETURN_KEEP), keepFit = r2(codes.reduce((a, c) => a + c.keep, 0)), fee = SERVICE_FEE[k];
     // The patient gets back everything they paid except what BHSC keeps (matches BHSC's own worksheet).
     rows.push({ label: s.n === 2 ? "Hearing aids paid" : "Hearing aid paid", amount: aidPaid });
     if (fitPaid) rows.push({ label: "Fitting, orientation & dispense paid", amount: fitPaid });
@@ -116,6 +124,7 @@ export function refund(s, mode = "all") {
     if (fitPaid) rows.push({ label: "BHSC keeps 5% of the fitting & dispense charge", amount: -keepFit });
     rows.push({ label: `Service fee · ${s.n === 2 ? "two aids" : "one aid"} returned`, amount: -fee });
     back = r2(aidPaid + fitPaid + other - keepAid - keepFit - fee);
+    math = { codes, keepFit, aidPaid, keepAid, keep5: r2(keepFit + keepAid), fee, kept: r2(keepFit + keepAid + fee), paid: r2(aidPaid + fitPaid + other) };
   } else {
     // Keep one aid: re-price as a single aid, no service fee and no 5%.
     const kept = mode === "one" ? ears[0] : mode === "right" ? ears[1] : ears[0];
@@ -126,5 +135,5 @@ export function refund(s, mode = "all") {
     rows.push({ label: "Service fee and 5%", sub: "Not charged — one side of a pair", amount: 0 });
     back = r2(aidBack + fitBack);
   }
-  return { rows, refund: Math.max(0, back), other, fee: mode === "all" ? SERVICE_FEE[k] : 0 };
+  return { rows, refund: Math.max(0, back), other, math, fee: mode === "all" ? SERVICE_FEE[k] : 0 };
 }
