@@ -5,6 +5,7 @@ import HAPrices from "@/HAPrices";
 import Compare from "@/Compare";
 import { BHSC_LOGO } from "@/components/ios";
 import { cn } from "@/lib/utils";
+import { MFRS, PRICE_LISTS } from "@/lib/pricing";
 import { Drawer as SideDrawer } from "@/components/ui/side-drawer";
 import { BlurFade } from "@/components/ui/blur-fade";
 
@@ -47,6 +48,10 @@ export default function App() {
       {/* Compare stays mounted so the options are still there after a trip to the estimate */}
       <div hidden={tab !== "compare"}><Compare menu={menu} onUse={(pick) => { setSeed({ ...pick }); go("estimate"); }} /></div>
       {tab === "haprices" && <BlurFade key="haprices"><HAPrices menu={menu} /></BlurFade>}
+      {/* Version line: which price lists this copy uses and when it was built */}
+      <footer className="mx-auto max-w-2xl px-4 pb-28 pt-2 text-[12px] leading-snug text-label3 lg:max-w-6xl lg:pb-6">
+        BHSC Amplification Estimate · 2026 tier pricing · Price lists: {MFRS.map(([m]) => `${m} ${PRICE_LISTS[m] || "2026"}`).join(", ")} · Built {__BUILD_DATE__}
+      </footer>
     </>
   );
 }

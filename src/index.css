@@ -77,3 +77,13 @@
 
 /* The logo keeps its colours on dark backgrounds */
 .bhsc-logo { filter: var(--logo-filter); }
+
+/* Print: only the estimate sheet (Estimate tab, "Print"), black on white, on any theme. */
+#print-estimate { display: none; }
+@media print {
+  @page { margin: 16mm; }
+  body > *:not(#print-estimate) { display: none !important; }
+  html, body { background: #fff !important; color: #000 !important; }
+  #print-estimate { display: block; color: #000; font-family: "Inter Variable", Arial, sans-serif; }
+  #print-estimate img { filter: none !important; }
+}

@@ -8,4 +8,6 @@ export default defineConfig({
   base: "./",
   plugins: [react(), viteSingleFile()],
   resolve: { alias: { "@": path.resolve(import.meta.dirname, "src") } },
+  // Shown in the app's footer, so whoever hosts it can tell which version they have
+  define: { __BUILD_DATE__: JSON.stringify(new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })) },
 });

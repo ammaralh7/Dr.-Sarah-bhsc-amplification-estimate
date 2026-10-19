@@ -3,8 +3,9 @@ import { ArrowRight, Copy, Plus, RotateCcw, X } from "lucide-react";
 import { NavBar, NavButton, ThemeButton, Group, Row, Capsule, Pills } from "@/components/ios";
 import { EarOrder, blankEar } from "@/components/order";
 import { UndoPill } from "@/components/ui/undo-pill";
-import { FEES, money, quoteLines, quoteTotal, earModel } from "@/lib/pricing";
+import { FEES, money, quoteLines, quoteTotal, earModel, hasLace, includedText } from "@/lib/pricing";
 import { cn } from "@/lib/utils";
+import { copyText } from "@/lib/copy";
 
 // Compare up to four hearing aids for one patient, side by side, at patient prices.
 const LETTERS = "ABCD";
@@ -30,11 +31,11 @@ export default function Compare({ menu = null, onUse }) {
     `${c.n === 2 ? "Two aids" : "One aid"} · ${c.incl === "all" ? "fitting, orientation & dispense and shipping included" : "hearing aid only"}${c.molds ? ` · ${c.molds === 2 ? "two earmolds" : "one earmold"}` : ""}`, "",
     ...c.opts.map((e, i) => {
       const m = earModel(e);
-      return m ? `Option ${LETTERS[i]}: ${m[0]} ${m[1]} (${m[2]}) · Tier ${m[4]} — ${money(totals[i])}` : null;
+      return m ? `Option ${LETTERS[i]}: ${m[0]} ${m[1]} (${m[2]}) · Tier ${m[4]}${hasLace([m[4]]) ? " · includes LACE AI" : ""} — ${money(totals[i])}` : null;
     }).filter(Boolean),
     "", "Includes up to 4 follow-up visits in the first year.",
   ].join("\n");
-  const copy = () => { try { navigator.clipboard.writeText(text).then(() => setToast((t) => t + 1), () => setFallback(text)); } catch { setFallback(text); } };
+  const copy = () => copyText(text).then((ok) => (ok ? setToast((t) => t + 1) : setFallback(text)));
 
   return (
     <div className="min-h-screen pb-16">
@@ -90,6 +91,7 @@ export default function Compare({ menu = null, onUse }) {
                         </Row>
                       ))}
                     </Group>
+                    <p className="px-1 text-[13px] leading-snug text-label2">{includedText([m[4]])}</p>
                     {onUse && (
                       <Capsule variant="tinted" className="h-10 justify-self-start px-4 text-[15px]" onClick={() => onUse({ n: c.n, incl: c.incl, molds: c.molds, ear: e })}>
                         Use in estimate<ArrowRight className="h-4 w-4" strokeWidth={2.4} />
