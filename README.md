@@ -4,9 +4,9 @@ A hearing-aid pricing website for Dr. Sarah Alhorebi, audiologist at Buffalo Hea
 
 ## What it does
 
-- **Estimate:** the whole order on one page, one tap per answer: one aid or two, then manufacturer and style (buttons) and model (a search box), what's included, earmolds and accessories. When the two ears get different hearing aids, the order splits into a **Right ear** and a **Left ear** card, side by side on a computer. The estimate updates live next to the order, with case number, billing code, notes and *Copy estimate*.
+- **Estimate:** the whole order on one page, one tap per answer: one aid or two, then manufacturer and style (buttons) and model (a search box), what's included, earmolds (both ears or just the right or left) and accessories. When the two ears get different hearing aids, the order splits into a **Right ear** and a **Left ear** card, side by side on a computer. The estimate updates live next to the order, with case number, billing code, notes and *Copy estimate*.
   - **Accessories:** each with its patient price, and any other accessory can be added by hand.
-  - **Refund if returned:** works out the refund from BHSC's return policy: the total paid minus what BHSC keeps (5% of the hearing aid charge, 5% of the fitting and dispense codes, and a $200 one-aid or $300 two-aid service fee). Returning one side of a pair has no penalty.
+  - **Refund if returned:** works out the refund from BHSC's return policy: the total paid minus what BHSC keeps (5% of the hearing aid charge, 5% of the fitting and dispense codes, and a $200 one-aid or $300 two-aid service fee). *Show the math* opens the line-by-line breakdown: 5% of each fitting and dispense code, 5% of the hearing aids, the fee, total paid and the refund. Returning one side of a pair has no penalty.
   - **CROS/BiCROS:** priced as a one-aid CROS plus a one-aid hearing aid, as the 2026 tier pricing says.
 - **Compare prices:** up to four hearing aids side by side for one patient, with the cheapest marked and how much more the others cost. *Use in estimate* opens the Estimate with the one the patient picks.
 - **2026 HA prices:** every hearing aid on the 2026 lists with its tier and the patient price for one aid and two, plus the tier and fee table.
