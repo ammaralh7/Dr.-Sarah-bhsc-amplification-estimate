@@ -5,11 +5,21 @@ import data from "@/data/pricing.json";
 export const modelKey = (mfr, name, style) =>
   `${mfr}-${name}-${style}`.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 180) || "model";
 
+// Prices saved with "Update prices" travel inside the page as <script type="application/json" id="bhsc-data">
+// and replace the built-in ones (models, BHSC costs, list dates, admin PIN).
+export const SAVED = (() => {
+  try { const el = document.getElementById("bhsc-data"); return el ? JSON.parse(el.textContent) : null; } catch { return null; }
+})();
+
 // BHSC cost per model lives in data/costs.json (confidential). It is optional: a public copy of the
 // app leaves the file out and still builds; the 2026 HA prices tab then hides the cost column.
-const COSTS = Object.values(import.meta.glob("../data/costs.json", { eager: true, import: "default" }))[0] || {};
+const BUILT_COSTS = Object.values(import.meta.glob("../data/costs.json", { eager: true, import: "default" }))[0] || {};
+const COSTS = SAVED?.costs || BUILT_COSTS;
 export const HAS_COSTS = Object.keys(COSTS).length > 0;
-export const MODELS = data.models.map((m) => [...m, COSTS[modelKey(m[0], m[1], m[2])] ?? null]);
+export const MODELS = (SAVED?.models || data.models).map((m) => [...m.slice(0, 7), COSTS[modelKey(m[0], m[1], m[2])] ?? null]);
+// How each current model is written on its manufacturer's price list ("model|style"), for matching a pasted list
+export const RAW = { ...(SAVED?.raw || data.raw || {}) };
+export const PRICES_UPDATED = SAVED?.updated || null;
 
 /* BHSC 2026 tier bands on invoice cost per unit (below $210 → tier 1). */
 export const BANDS = [[210, 1], [301, 2], [380, 3], [460, 4], [551, 5], [652, 6], [763, 7], [901, 8], [1011, 9], [1201, 10], [1361, 11]];
@@ -18,7 +28,7 @@ export const FAMILIES = ["RIC", "BTE", "ITE", "ITC", "CIC", "IIC", "CUSTOM", "AL
 
 export const findModel = (mfr, name, style) => MODELS.findIndex((m) => modelKey(m[0], m[1], m[2]) === modelKey(mfr, name, style));
 export const ADDONS = data.addons;
-export const PRICE_LISTS = data.lists || {};
+export const PRICE_LISTS = { ...(SAVED?.lists || data.lists || {}) };
 export const TIERS = {1:[410,800],2:[515,1025],3:[615,1230],4:[760,1515],5:[900,1790],6:[1055,2210],7:[1230,2465],8:[1395,2780],9:[1650,3300],10:[1870,3850],11:[2015,4025]};
 export const FEES = { fit: [595, 845], ship: 25, molds: [0, 115, 215] };
 export const MFRS = [["ReSound", "var(--resound)"], ["Phonak", "var(--phonak)"], ["Oticon", "var(--oticon)"], ["Starkey", "var(--starkey)"]];

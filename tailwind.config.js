@@ -17,7 +17,7 @@ export default {
         label: "var(--label)", label2: "var(--label2)", label3: "var(--label3)",
         sep: "var(--sep)", fill: "var(--fill)", fill2: "var(--fill2)",
         tint: "var(--tint)", "tint-ink": "var(--tint-ink)", "tint-soft": "var(--tint-soft)",
-        warn: "var(--warn)", "warn-ink": "var(--warn-ink)", material: "var(--material)",
+        warn: "var(--warn)", "warn-ink": "var(--warn-ink)", ok: "var(--ok)", "ok-ink": "var(--ok-ink)", bad: "var(--bad)", material: "var(--material)",
       },
     },
   },
