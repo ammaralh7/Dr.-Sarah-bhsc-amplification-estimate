@@ -63,13 +63,35 @@ export const orderReady = (s) => !!s.n && earsInUse(s).every((e) => earModel(e))
 export const orderMfrs = (s) => [...new Set(earsInUse(s).map((e) => e.mfr).filter(Boolean))];
 export const accessoriesFor = (s) => orderMfrs(s).flatMap((mfr) => ADDONS[mfr] || []);
 
+/* Billing codes as on BHSC's purchase agreement (page 2). Hearing aids: CIC/IIC → CIC, RIC → BTE.
+   CROS/BiCROS: ITE, ITC (CIC/IIC too) or BTE (RIC too) per side; binaural systems by the two sides. */
+const BILL_FAM = { CIC: "CIC", IIC: "CIC", ITC: "ITC", ITE: "ITE", BTE: "BTE", RIC: "BTE" };
+const CROS_FAM = { ITE: "ITE", ITC: "ITC", CIC: "ITC", IIC: "ITC", BTE: "BTE", RIC: "BTE" };
+export const CROS_MONO = { ITE: "V5171", ITC: "V5172", BTE: "V5181" };
+export const CROS_BIN = { "ITE/ITE": "V5211", "ITE/ITC": "V5212", "ITE/BTE": "V5213", "ITC/ITC": "V5214", "ITC/BTE": "V5215", "BTE/BTE": "V5221" };
+const CROS_ORDER = ["ITE", "ITC", "BTE"];
+const crosPairKey = (a, b) => [a, b].sort((x, y) => CROS_ORDER.indexOf(x) - CROS_ORDER.indexOf(y)).join("/");
+
+/** Which boxes to tick: { mono: [{ fam, ear }], bin, crosMono, crosBin } (ear "R" / "L" / null). */
+export function billingBoxes(s) {
+  if (!orderReady(s)) return null;
+  const ears = earsInUse(s), ms = ears.map(earModel), out = { mono: [], bin: null, crosMono: null, crosBin: null };
+  if (ms.some(isCros)) {
+    if (s.n === 1) out.crosMono = CROS_FAM[ears[0].style];
+    else out.crosBin = crosPairKey(CROS_FAM[ears[0].style], CROS_FAM[(mixed(s) ? ears[1] : ears[0]).style]);
+  } else if (s.n === 1) out.mono.push({ fam: BILL_FAM[ears[0].style], ear: s.aidEar || null });
+  else if (!mixed(s) || BILL_FAM[ears[0].style] === BILL_FAM[ears[1].style]) out.bin = BILL_FAM[ears[0].style];
+  else out.mono.push({ fam: BILL_FAM[ears[0].style], ear: "R" }, { fam: BILL_FAM[ears[1].style], ear: "L" });
+  return out;
+}
+
 export function billingCode(s) {
-  if (!orderReady(s)) return "";
-  const ears = earsInUse(s), ms = ears.map(earModel);
-  if (ms.some(isCros)) return s.n === 2 ? "V5211–V5221 (CROS/BiCROS)" : "V5171–V5181 (CROS/BiCROS)";
-  if (s.n === 1) return CODES[ears[0].style][0];
-  if (!mixed(s) || ears[0].style === ears[1].style || CODES[ears[0].style][1] === CODES[ears[1].style][1]) return CODES[ears[0].style][1];
-  return `${CODES[ears[0].style][0]} + ${CODES[ears[1].style][0]}`;
+  const b = billingBoxes(s);
+  if (!b) return "";
+  if (b.crosMono) return `${CROS_MONO[b.crosMono]} (CROS)`;
+  if (b.crosBin) return `${CROS_BIN[b.crosBin]} (BiCROS ${b.crosBin})`;
+  if (b.bin) return CODES[b.bin][1];
+  return b.mono.map((m) => `${CODES[m.fam][0]}${m.ear ? ` ${m.ear}` : ""}`).join(" + ");
 }
 
 export function quoteLines(s) {
@@ -80,7 +102,7 @@ export function quoteLines(s) {
     s.ears.forEach((e, i) => { const m = earModel(e); out.push({ label: `${EAR_NAMES[i]} · Tier ${m[4]}`, sub: `${m[0]} ${m[1]} · ${m[2]}`, amount: earAmount(s, m) }); });
   } else {
     const m = earModel(s.ears[0]);
-    out.push({ label: `${s.n === 2 ? "Hearing aids (pair)" : "Hearing aid"} · Tier ${m[4]}`, sub: `${m[0]} ${m[1]} · ${m[2]}`, amount: TIERS[m[4]][k] });
+    out.push({ label: `${s.n === 2 ? "Hearing aids (pair)" : `Hearing aid${s.aidEar ? ` (${s.aidEar === "L" ? "left" : "right"} ear)` : ""}`} · Tier ${m[4]}`, sub: `${m[0]} ${m[1]} · ${m[2]}`, amount: TIERS[m[4]][k] });
   }
   if (s.incl === "all") {
     out.push({ label: "Fitting, orientation & dispense", sub: s.n === 2 ? "Two aids" : "One aid", amount: FEES.fit[k] });

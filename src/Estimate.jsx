@@ -13,7 +13,7 @@ import { copyText } from "@/lib/copy";
 import { CONTRACT_URL, contractBlob } from "@/lib/contract";
 
 // One page, laid out for a computer: the order at the top, the estimate and refund under it, updating as it is filled in.
-const blank = () => ({ n: null, same: true, ears: [blankEar(), blankEar()], incl: "all", molds: 0, addons: [], moldEar: "R", notes: "", caseNo: "", code: "" });
+const blank = () => ({ n: null, same: true, ears: [blankEar(), blankEar()], incl: "all", molds: 0, addons: [], moldEar: "R", aidEar: null, notes: "", caseNo: "", code: "" });
 
 export default function Estimate({ menu = null, seed = null }) {
   const [s, setS] = useState(blank);
@@ -49,6 +49,10 @@ export default function Estimate({ menu = null, seed = null }) {
         <div role="group" aria-label="Order" className="flex min-w-0 flex-wrap items-center gap-x-5 gap-y-2.5 rounded-[12px] bg-card px-4 py-2.5">
           <Pills label="Hearing aids" value={s.n} onChange={(v) => set({ n: +v, code: "", molds: +v === 1 && s.molds === 2 ? 1 : s.molds })}
             options={[{ value: 1, label: "One aid" }, { value: 2, label: "Two aids" }]} />
+          {s.n === 1 && (
+            <Pills label="Ear" value={s.aidEar} onChange={(v) => set({ aidEar: v, code: "" })}
+              options={[{ value: "R", label: "Right" }, { value: "L", label: "Left" }]} />
+          )}
           {s.n === 2 && (
             <label className="flex cursor-pointer items-center gap-2.5 text-[15px]">
               <Switch label="Same aid in both ears" checked={s.same}
