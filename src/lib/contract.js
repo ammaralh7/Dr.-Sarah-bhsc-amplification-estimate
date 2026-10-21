@@ -1,11 +1,12 @@
 /* "Print contract": BHSC's Hearing Aid Fitting, Orientation and Purchase Agreement (src/assets/
    purchase-agreement.pdf) with page 2 filled in from the estimate: III. Supplies and Accessories and the
-   Patient Charges Summary, plus the billing code boxes at the top of page 2. The rest of the
+   Patient Charges Summary, plus the billing code boxes at the top of page 2, and page 1 sections I (fitting and dispense) and II
+   (hearing aid table, Tier #, Total Hearing Aid(s)). Serial numbers and warranty dates are left blank. The rest of the
    form is left for staff and the patient to fill by hand.
    The PDF is optional, like costs.json: a copy built without it hides the button. Positions are in PDF
    points from the top-left of page 2 (612 × 792), measured on the 1/13/26 form. */
 import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
-import { FEES, quoteParts, billingBoxes } from "@/lib/pricing";
+import { FEES, quoteParts, billingBoxes, earsInUse, earModel, mixed } from "@/lib/pricing";
 
 const FILES = import.meta.glob("../assets/purchase-agreement.pdf", { eager: true, query: "?url", import: "default" });
 export const CONTRACT_URL = Object.values(FILES)[0] || null;
@@ -17,6 +18,17 @@ const BASE = { molds: 403, other: 462.5, fit: 563 };              // baselines o
 const MONO = { CIC: 130.6, ITC: 146.5, ITE: 162.5, BTE: 178.5 }, BIN_X = 327.1, LR = { L: 117.5, R: 156.3 };
 const CROS_MONO_Y = { ITE: 249.9, ITC: 265.8, BTE: 281.8 };
 const CROS_BIN_Y = { "ITE/ITE": 265.8, "ITE/ITC": 281.8, "ITE/BTE": 297.8, "ITC/ITC": 313.7, "ITC/BTE": 329.7, "BTE/BTE": 345.6 };
+// Page 1: section I lines/boxes, section II table rows and columns
+const P1 = { mono: 425.5, bin: 512.6, dispX: 360.1, disp: { V5241: 468.7, V5200: 484.6, V5160: 554.6, V5240: 570.5 } };
+const ROWS = [661.2, 680.2, 701], COL = { ear: 46, mfr: 76, model: 192, battery: 422 };
+const battery = (m) => {
+  const t = `${m[1]} ${m[2]}`;
+  if (/rechargeable|sphere/i.test(t) || /(^|[\s-])R$/.test(m[1]) || /\sR$/.test(m[2])) return "Rechargeable";
+  if (/\b312\b/.test(t)) return "312";
+  if (/size 13|(^|[\s.-])13\b/.test(t)) return "13";
+  if (/10 battery|\.10\b/.test(t)) return "10";
+  return "";
+};
 const num = (v) => v.toLocaleString("en-US", { minimumFractionDigits: v % 1 ? 2 : 0, maximumFractionDigits: 2 });
 
 export async function contractBlob(s) {
@@ -74,6 +86,37 @@ export async function contractBlob(s) {
   text(num(q.aids), 264, 589.5, 84);
   text(num(q.supplies), 264, 617, 84);
   text(num(q.total), 227, 727, 94);
+
+  // Page 1 — I. Fitting, Orientation & Dispense Fees (only when the fitting is part of the order)
+  const p1 = pdf.getPage(0);
+  const text1 = (t, x, baseline, max, size = 10) => {
+    let sz = size;
+    while (max && sz > 6.5 && font.widthOfTextAtSize(t, sz) > max) sz -= 0.5;
+    p1.drawText(t, { x, y: H - baseline, size: sz, font, color: INK });
+  };
+  const tick1 = (x0, baseline) =>
+    p1.drawSvgPath("M 2 5.6 L 4.7 8.6 L 9.6 1.2", { x: x0, y: H - (baseline - 10), borderColor: INK, borderWidth: 1.6 });
+  if (s.incl === "all") {
+    tick1(44, s.n === 2 ? P1.bin : P1.mono);
+    tick1(P1.dispX, P1.disp[bb.crosMono ? "V5200" : bb.crosBin ? "V5240" : s.n === 2 ? "V5160" : "V5241"]);
+  }
+
+  // II. Hearing Aid(s): one row per ear; serial number and warranty expiration left blank
+  const ears = earsInUse(s);
+  const rows = s.n === 1 ? [[s.aidEar || "", ears[0]]] : [["R", ears[0]], ["L", mixed(s) ? ears[1] : ears[0]]];
+  rows.forEach(([ear, e], i) => {
+    const m = earModel(e);
+    // the battery has its own column, so leave it out of the model text
+    const style = (["ALL", "CUSTOM"].includes(m[3]) ? e.style : m[2]).replace(/\s*·\s*(rechargeable|312 battery|10 battery|size 13)\b/gi, "");
+    text1(ear, COL.ear, ROWS[i], 20);
+    text1(m[0], COL.mfr, ROWS[i], 108);
+    text1(`${m[1]} · ${style}`, COL.model, ROWS[i], 105);
+    text1(battery(m), COL.battery, ROWS[i], 70);
+  });
+  const tiers = rows.map(([ear, e]) => [ear, earModel(e)[4]]);
+  tick1(116.7, 762.4);
+  text1(tiers[1] && tiers[1][1] !== tiers[0][1] ? tiers.map(([ear, t]) => `${ear} ${t}`).join(" · ") : String(tiers[0][1]), 171, 761, 120, 11);
+  text1(num(q.aids), 450, 761, 92, 11);
 
   return new Blob([await pdf.save()], { type: "application/pdf" });
 }
