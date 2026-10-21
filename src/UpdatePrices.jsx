@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ArrowLeft, ArrowRight, Check, ClipboardPaste, Download, KeyRound, Lock, Plus, TriangleAlert } from "lucide-react";
 import { NavBar, ThemeButton, SearchField, Pills, Capsule } from "@/components/ios";
-import { MODELS, MFRS, PRICE_LISTS, TIERS, FAMILIES, HAS_COSTS, modelKey, money, tierFor } from "@/lib/pricing";
-import { readPriceList, styleLabel, checkPin, makePin, nextData, savedPage, downloadPage, useData } from "@/lib/priceupdate";
+import { MODELS, MFRS, PRICE_LISTS, TIERS, FAMILIES, HAS_COSTS, famStyle, modelKey, money, tierFor } from "@/lib/pricing";
+import { readPriceList, pastes, styleLabel, checkPin, makePin, nextData, savedPage, downloadPage, useData } from "@/lib/priceupdate";
 import { cn } from "@/lib/utils";
 
 /* Update prices (admin PIN): paste a manufacturer's new price list or change/add a model by hand, review
@@ -14,10 +14,14 @@ const patient = (t) => `${money(TIERS[t][0])} / ${money(TIERS[t][1])}`;
 const FAM_LABEL = { CUSTOM: "Custom (in the ear)", ALL: "All styles" };
 const HOW = {
   ReSound: "ReSound’s price list is a scanned image, so type the prices instead: one model and its BHSC price per line, e.g. “Sensia 9  1415”. Only the models you type are changed.",
+  Signia: "Signia’s price list doesn’t copy cleanly, so type the prices instead: one model and its BHSC price (“Level 1”) per line, e.g. “Pure Charge&Go 7AX  1090”. Every style of that model gets the new price; only the models you type are changed.",
   Phonak: "Open the BHSC pricing spreadsheet from Phonak, select the Product, List Price and Net Price columns, copy (Ctrl+C) and paste here (Ctrl+V).",
   Oticon: "Open Oticon’s price list (PDF), press Ctrl+A then Ctrl+C, click in the box and press Ctrl+V. The Net Price is used.",
   Starkey: "Open Starkey’s account price report (PDF), press Ctrl+A then Ctrl+C, click in the box and press Ctrl+V. The account price is used.",
 };
+const howTo = (mfr) => HOW[mfr] || `Type the ${mfr} prices: one model and its BHSC price per line, e.g. “Model name  1200”. Every style of that model gets the new price; a name the app doesn’t have is added as a new model.`;
+const EXAMPLE = { ReSound: "Sensia 9  1415\nVivia 7  930", Signia: "Pure Charge&Go 7AX  1090\nStyletto 5AX  775" };
+const NEW = "+new";
 const input = "h-10 w-full rounded-[10px] bg-fill px-3 text-[15px] text-label outline-none placeholder:text-label3 focus:ring-2 focus:ring-tint";
 const card = "rounded-[12px] bg-card";
 // what saving would change (a model missing from a new list only counts once it is set to Remove)
@@ -184,7 +188,7 @@ function Paste({ onBack, onUse }) {
   const [mfr, setMfr] = useState("Oticon");
   const [text, setText] = useState("");
   const r = useMemo(() => (text.trim() ? readPriceList(mfr, text) : null), [mfr, text]);
-  const typed = mfr === "ReSound";
+  const typed = !pastes(mfr);
   const tierMoves = r ? r.changes.filter((c) => c.newTier !== c.oldTier).length : 0;
   const missing = r && !typed ? r.missing : [];
   const found = r && (r.changes.length || r.added.length || missing.length);
@@ -205,9 +209,9 @@ function Paste({ onBack, onUse }) {
       </div>
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_380px]">
         <div className="grid min-w-0 content-start gap-2">
-          <p className="px-1 text-[14px] leading-snug text-label2">{HOW[mfr]}</p>
+          <p className="px-1 text-[14px] leading-snug text-label2">{howTo(mfr)}</p>
           <textarea aria-label={`${mfr} price list`} value={text} onChange={(e) => setText(e.target.value)} spellCheck={false}
-            placeholder={typed ? "Sensia 9  1415\nVivia 7  930" : `Paste the ${mfr} price list here`}
+            placeholder={typed ? EXAMPLE[mfr] || "Model name  1200" : `Paste the ${mfr} price list here`}
             className="h-[460px] w-full resize-y rounded-[12px] bg-card p-4 font-mono text-[13px] leading-relaxed text-label outline-none shadow-[0_0_0_1px_var(--sep)] focus:shadow-[0_0_0_2px_var(--tint)]" />
         </div>
         <aside aria-label="What the app found" className={cn(card, "grid content-start gap-3 self-start p-5")}>
@@ -245,17 +249,19 @@ function Edit({ count, onBack, onStage, onReview }) {
   const [q, setQ] = useState("");
   const [pick, setPick] = useState(null);
   const [cost, setCost] = useState("");
-  const [nm, setNm] = useState({ mfr: "Oticon", name: "", style: "", fam: "RIC", cost: "" });
+  const [nm, setNm] = useState({ mfr: "Oticon", company: "", name: "", style: "", fam: "RIC", cost: "" });
   const [note, setNote] = useState("");
   const costRef = useRef(null);
   const words = q.trim().toLowerCase().split(/\s+/).filter(Boolean);
   const hits = words.length ? MODELS.filter((m) => words.every((w) => `${m[0]} ${m[1]} ${m[2]}`.toLowerCase().includes(w)))
     .sort((a, b) => a[5] - b[5]).slice(0, 12) : [];
   const c = price(cost), nc = price(nm.cost);
+  // a new company typed with the same name as one the app has (any capitals) goes to that one
+  const company = nm.company.trim(), known = MFRS.find(([n]) => n.toLowerCase() === company.toLowerCase());
+  const nmfr = nm.mfr === NEW ? (known ? known[0] : company) : nm.mfr;
   // shown the way the app shows that manufacturer's styles, so the next pasted list finds it
-  const nstyle = !nm.style.trim() ? (nm.fam === "ALL" ? "All styles · one price per level" : FAM_LABEL[nm.fam] || nm.fam)
-    : nm.mfr === "Starkey" ? styleLabel("Starkey", "", nm.style.trim()) : nm.style.trim();
-  const nkey = modelKey(nm.mfr, nm.name.trim(), nstyle);
+  const nstyle = !nm.style.trim() ? famStyle(nm.fam) : nmfr === "Starkey" ? styleLabel("Starkey", "", nm.style.trim()) : nm.style.trim();
+  const nkey = modelKey(nmfr, nm.name.trim(), nstyle);
   const exists = nm.name.trim() && MODELS.some((m) => modelKey(m[0], m[1], m[2]) === nkey);
   const flash = (t) => { setNote(t); setTimeout(() => setNote(""), 4000); };
 
@@ -266,7 +272,7 @@ function Edit({ count, onBack, onStage, onReview }) {
     setPick(null); setCost(""); setQ("");
   };
   const addModel = () => {
-    onStage([{ type: "new", key: nkey, mfr: nm.mfr, name: nm.name.trim(), style: nstyle, fam: nm.fam, newCost: nc, newTier: tierFor(nc), add: true }]);
+    onStage([{ type: "new", key: nkey, mfr: nmfr, name: nm.name.trim(), style: nstyle, fam: nm.fam, autoStyle: !nm.style.trim(), newCost: nc, newTier: tierFor(nc), add: true }]);
     flash(`${nm.name.trim()} added to the changes.`);
     setNm((p) => ({ ...p, name: "", style: "", cost: "" }));
   };
@@ -319,7 +325,14 @@ function Edit({ count, onBack, onStage, onReview }) {
 
         <section aria-label="Add a new model" className={cn(card, "grid content-start gap-3 p-5")}>
           <h2 className="text-[18px] font-semibold">Add a new model</h2>
-          <Pills label="Manufacturer" value={nm.mfr} onChange={(v) => setNm((p) => ({ ...p, mfr: v }))} options={MFRS.map(([n]) => ({ value: n, label: n }))} />
+          <Pills label="Manufacturer" value={nm.mfr} onChange={(v) => setNm((p) => ({ ...p, mfr: v }))}
+            options={[...MFRS.map(([n]) => ({ value: n, label: n })), { value: NEW, label: "+ New company", title: "A manufacturer the app doesn’t have yet" }]} />
+          {nm.mfr === NEW && (
+            <label className="grid gap-1 text-[13px] font-semibold text-label2">Company name
+              <input value={nm.company} onChange={(e) => setNm((p) => ({ ...p, company: e.target.value }))} placeholder="e.g. Widex" autoFocus className={input} />
+              <span className="font-normal text-label3">{known ? `${known[0]} is already in the app; the model is added there.` : "The company gets its own button everywhere in the app once you save."}</span>
+            </label>
+          )}
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <label className="grid gap-1 text-[13px] font-semibold text-label2">Model name
               <input value={nm.name} onChange={(e) => setNm((p) => ({ ...p, name: e.target.value }))} placeholder="e.g. Intent 5" className={input} />
@@ -329,13 +342,13 @@ function Edit({ count, onBack, onStage, onReview }) {
             </label>
           </div>
           <Pills label="Type" value={nm.fam} onChange={(v) => setNm((p) => ({ ...p, fam: v }))}
-            options={FAMILIES.map((f) => ({ value: f, label: FAM_LABEL[f] || f, title: f === "CUSTOM" ? "ITE, ITC, CIC and IIC" : f === "ALL" ? "One price for every style (ReSound)" : undefined }))} />
+            options={FAMILIES.map((f) => ({ value: f, label: FAM_LABEL[f] || f, title: f === "CUSTOM" ? "ITE, ITC, CIC and IIC" : f === "ALL" ? "One price for every style" : undefined }))} />
           <label className="grid gap-1 text-[13px] font-semibold text-label2">BHSC price (per aid)
             <input inputMode="decimal" value={nm.cost} onChange={(e) => setNm((p) => ({ ...p, cost: e.target.value }))} placeholder="$0.00" className={input} />
           </label>
           {nc && <div className="text-[14px]">Tier <b>{tierFor(nc)}</b> · patients pay <b>{patient(tierFor(nc))}</b> (one aid / two aids)</div>}
           {exists && <p className="text-[13px] text-warn-ink">This model is already in the app — change its price on the left.</p>}
-          <Capsule className="h-10 justify-self-start px-4 text-[15px]" disabled={!nm.name.trim() || !nc || exists} onClick={addModel}><Plus className="h-4 w-4" strokeWidth={2.4} />Add model</Capsule>
+          <Capsule className="h-10 justify-self-start px-4 text-[15px]" disabled={!nm.name.trim() || !nc || exists || !nmfr} onClick={addModel}><Plus className="h-4 w-4" strokeWidth={2.4} />Add model</Capsule>
           <p className="text-[12px] leading-snug text-label3">“Type” decides where it shows when choosing a hearing aid and which billing code the contract uses.</p>
         </section>
       </div>
@@ -347,6 +360,8 @@ function Edit({ count, onBack, onStage, onReview }) {
 function Review({ staged, setStaged, pin, onDropPin, onMore, onSave }) {
   const drop = (key) => setStaged((p) => p.filter((c) => c.key !== key));
   const patch = (key, v) => setStaged((p) => p.map((c) => (c.key === key ? { ...c, ...v } : c)));
+  // a new model's style follows its type unless one was typed in
+  const setType = (c, fam) => patch(c.key, c.autoStyle ? { fam, style: famStyle(fam), key: modelKey(c.mfr, c.name, famStyle(fam)) } : { fam });
   const prices = staged.filter((c) => c.type === "price"), added = staged.filter((c) => c.type === "new"), missing = staged.filter((c) => c.type === "missing");
   const tierMoves = prices.filter((c) => c.newTier !== c.oldTier).length;
   const removed = missing.filter((c) => c.remove).length;
@@ -389,9 +404,10 @@ function Review({ staged, setStaged, pin, onDropPin, onMore, onSave }) {
               {added.map((c) => (
                 <tr key={c.key} className={cn(!c.add && "opacity-50")}>
                   <td className={cell}><b className="text-[15px]">{c.name}</b> <span className="text-[14px] text-label2">· {c.style}</span>
-                    <div className="mt-1 flex flex-wrap items-center gap-1 text-[12px] text-label3">{c.mfr} · Type
-                      <Pills aria={`Type for ${c.name}`} value={c.fam} onChange={(v) => patch(c.key, { fam: v })}
-                        options={FAMILIES.filter((f) => c.mfr === "ReSound" || f !== "ALL").map((f) => ({ value: f, label: FAM_LABEL[f] || f }))} className="[&_button]:h-6 [&_button]:px-1.5 [&_button]:text-[12px]" />
+                    <div className="mt-1 flex flex-wrap items-center gap-1 text-[12px] text-label3">
+                      {MFRS.some(([n]) => n === c.mfr) ? c.mfr : <b className="text-tint">New company: {c.mfr}</b>} · Type
+                      <Pills aria={`Type for ${c.name}`} value={c.fam} onChange={(v) => setType(c, v)}
+                        options={FAMILIES.map((f) => ({ value: f, label: FAM_LABEL[f] || f }))} className="[&_button]:h-6 [&_button]:px-1.5 [&_button]:text-[12px]" />
                     </div>
                   </td>
                   <td className={cn(cell, "tnum")}><b className="text-[15px]">{usd(c.newCost)}</b></td>

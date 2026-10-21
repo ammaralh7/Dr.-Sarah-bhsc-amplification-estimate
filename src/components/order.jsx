@@ -19,7 +19,7 @@ export function EarOrder({ title, side, e, k, onChange, compact = false, wide = 
       footer={sel && sel[5] ? "Older price list — confirm the cost with the manufacturer before ordering." : null}>
       {(() => {
         const mfr = (
-          <Choices label="Manufacturer" value={e.mfr} cols={compact ? "grid-cols-2" : "grid-cols-2 sm:grid-cols-4"}
+          <Choices label="Manufacturer" value={e.mfr} cols={compact ? "grid-cols-2" : "grid-cols-2 sm:grid-cols-[repeat(auto-fit,minmax(6.75rem,1fr))]"}
             options={MFRS.map(([name, color]) => ({ value: name, label: name, dot: color }))}
             onChange={(v) => onChange({ mfr: v, model: null, mkey: null, style: e.style && styleAvailable(v, e.style) ? e.style : null })} />
         );
@@ -32,7 +32,7 @@ export function EarOrder({ title, side, e, k, onChange, compact = false, wide = 
         // wide (one full-width card on a computer): manufacturer and style side by side, one row
         return wide ? (
           <div className="bg-card pl-4">
-            <div className="hairline grid min-w-0 grid-cols-1 gap-3 py-2.5 pr-4 lg:grid-cols-[minmax(0,4fr)_minmax(0,5fr)] lg:gap-6">
+            <div className="hairline grid min-w-0 grid-cols-1 gap-3 py-2.5 pr-4 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)] lg:gap-6">
               <Sub label="Manufacturer">{mfr}</Sub>
               <Sub label="Style" hint={styleHint}>{style}</Sub>
             </div>

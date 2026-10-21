@@ -29,7 +29,7 @@ This runs `vite build` and then `postbuild.py`, and writes `dist/index.html`.
 
 ## Not in this repo
 
-BHSC's own costs per hearing aid (`src/data/costs.json`) and the manufacturer price lists are confidential and stay in the clinic's private copy. Without the cost file the app builds the same way; the 2026 HA prices tab just doesn't show a cost column. The Update prices tab (admin PIN `0000`; paste a new price list or edit a model, then save an updated copy of the app) works here too; with no costs built in, every pasted price counts as new and the tiers show what changed.
+BHSC's own costs per hearing aid (`src/data/costs.json`) and the manufacturer price lists are confidential and stay in the clinic's private copy. Without the cost file the app builds the same way; the 2026 HA prices tab just doesn't show a cost column. The Update prices tab (admin PIN `0000`; paste a new price list, type prices for ReSound, Signia or a company added with *+ New company*, or edit a model, then save an updated copy of the app) works here too; with no costs built in, every pasted price counts as new and the tiers show what changed.
 
 ## Built with
 
