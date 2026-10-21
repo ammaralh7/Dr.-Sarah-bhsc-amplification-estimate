@@ -25,13 +25,18 @@ export const PRICES_UPDATED = SAVED?.updated || null;
 export const BANDS = [[210, 1], [301, 2], [380, 3], [460, 4], [551, 5], [652, 6], [763, 7], [901, 8], [1011, 9], [1201, 10], [1361, 11]];
 export const tierFor = (cost) => BANDS.reduce((t, [lo, n]) => (cost >= lo ? n : t), 1);
 export const FAMILIES = ["RIC", "BTE", "ITE", "ITC", "CIC", "IIC", "CUSTOM", "ALL"];
+// Style shown for a model added by hand without one
+export const famStyle = (fam) => ({ ALL: "All styles · one price per level", CUSTOM: "Custom · ITE / ITC / CIC / IIC" })[fam] || fam;
 
 export const findModel = (mfr, name, style) => MODELS.findIndex((m) => modelKey(m[0], m[1], m[2]) === modelKey(mfr, name, style));
 export const ADDONS = data.addons;
 export const PRICE_LISTS = { ...(SAVED?.lists || data.lists || {}) };
 export const TIERS = {1:[410,800],2:[515,1025],3:[615,1230],4:[760,1515],5:[900,1790],6:[1055,2210],7:[1230,2465],8:[1395,2780],9:[1650,3300],10:[1870,3850],11:[2015,4025]};
 export const FEES = { fit: [595, 845], ship: 25, molds: [0, 115, 215] };
-export const MFRS = [["ReSound", "var(--resound)"], ["Phonak", "var(--phonak)"], ["Oticon", "var(--oticon)"], ["Starkey", "var(--starkey)"]];
+export const BUILT_MFRS = ["ReSound", "Phonak", "Oticon", "Starkey", "Signia"];
+// Companies added with "Update prices" come after the built-in ones, with a plain grey dot
+export const MFRS = [...BUILT_MFRS.map((n) => [n, `var(--${n.toLowerCase()})`]),
+  ...(SAVED?.mfrs || []).filter((n) => !BUILT_MFRS.includes(n)).map((n) => [n, "var(--label3)"])];
 export const STYLES = [["RIC", "Receiver in canal"], ["BTE", "Behind the ear"], ["ITE", "In the ear"], ["ITC", "In the canal"], ["CIC", "Completely in canal"], ["IIC", "Invisible in canal"]];
 const CODES = { CIC: ["V5254","V5258"], IIC: ["V5254","V5258"], ITC: ["V5255","V5259"], ITE: ["V5256","V5260"], BTE: ["V5257","V5261"], RIC: ["V5257","V5261"] };
 

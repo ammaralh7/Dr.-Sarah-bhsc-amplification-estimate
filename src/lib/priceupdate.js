@@ -1,7 +1,7 @@
 /* "Update prices": reading a pasted manufacturer price list, working out what changed, the admin PIN,
    and saving an updated copy of the app. The list readers follow build/build_data.py, which built the
    app's prices from the same lists, so a pasted list lines up with the models the app already has. */
-import { MODELS, RAW, PRICE_LISTS, SAVED, modelKey, tierFor } from "@/lib/pricing";
+import { MODELS, MFRS, BUILT_MFRS, RAW, PRICE_LISTS, SAVED, modelKey, tierFor, famStyle } from "@/lib/pricing";
 import { sha256 } from "@/lib/sha256";
 import { PAGE, DOCTYPE } from "@/lib/snapshot";
 
@@ -74,20 +74,23 @@ function readPhonak(text) {
   return { rows, other };
 }
 
-// ReSound's list is a scanned image, so its prices are typed in: one "Model  price" per line
-function readResound(text) {
+// Lists whose text can't be pasted cleanly (ReSound's is a scanned image, Signia's loses its table) and
+// companies added by hand: the prices are typed in, one "Model  price" per line
+function readTyped(text) {
   const rows = [], other = [];
   for (const raw of text.split(/\r?\n/)) {
     const l = raw.trim();
     if (!l) continue;
     const m = l.match(/^(.+?)\s+\$?([\d,]+(?:\.\d+)?)$/);
     if (!m) { other.push(l); continue; }
-    rows.push({ model: m[1], style: "All styles (one price per level)", fam: "ALL", cost: toNum(m[2]), line: l });
+    rows.push({ model: m[1].trim(), cost: toNum(m[2]), line: l });
   }
   return { rows, other };
 }
 
-const READERS = { Oticon: readOticon, Starkey: readStarkey, Phonak: readPhonak, ReSound: readResound };
+const READERS = { Oticon: readOticon, Starkey: readStarkey, Phonak: readPhonak };
+/** Whether a company's list is pasted as is (true) or typed as "Model  price" lines (false). */
+export const pastes = (mfr) => !!READERS[mfr];
 
 /* How the app shows a style (same as label() in build/build_web.py). */
 export function styleLabel(mfr, model, style, fam) {
@@ -102,6 +105,7 @@ const round2 = (n) => Math.round(n * 100) / 100;
 
 /** Compare a pasted list with the app's current prices for one manufacturer. */
 export function readPriceList(mfr, text) {
+  if (!READERS[mfr]) return readTypedList(mfr, text);
   const { rows, other } = READERS[mfr](text);
   const byRaw = new Map(Object.entries(RAW).filter(([k]) => MODELS.some((m) => m[0] === mfr && modelKey(m[0], m[1], m[2]) === k)).map(([k, r]) => [r, k]));
   const rowsByKey = new Map(MODELS.map((m) => [modelKey(m[0], m[1], m[2]), m]));
@@ -125,6 +129,34 @@ export function readPriceList(mfr, text) {
   const missing = current.filter((m) => !found.has(modelKey(m[0], m[1], m[2])))
     .map((m) => ({ type: "missing", key: modelKey(m[0], m[1], m[2]), mfr, name: m[1], style: m[2], fam: m[3], oldCost: m[7], oldTier: m[4], remove: false }));
   return { read: rows.length, matched: found.size, total: current.length, changes, added, missing, other };
+}
+
+/* Typed lines match the company's models by name (case, spaces and punctuation ignored); every style of
+   that model gets the new price. A name the app doesn't have becomes a new model. Only the models typed
+   are changed, so nothing is listed as missing. */
+const norm = (s) => s.toLowerCase().replace(/[^a-z0-9]+/g, "");
+function readTypedList(mfr, text) {
+  const { rows, other } = readTyped(text);
+  const mine = MODELS.filter((m) => m[0] === mfr);
+  const found = new Set(), changes = [], added = [];
+  for (const r of rows) {
+    // models on the current lists first; an older-list model only when it is the only one with that name
+    const all = mine.filter((m) => norm(m[1]) === norm(r.model)), cur = all.filter((m) => !m[5]), same = cur.length ? cur : all;
+    if (!same.length) {
+      const style = famStyle("ALL"), key = modelKey(mfr, r.model, style);
+      if (!added.some((a) => a.key === key))
+        added.push({ type: "new", key, mfr, name: r.model, style, fam: "ALL", autoStyle: true, newCost: round2(r.cost), newTier: tierFor(r.cost), add: true });
+      continue;
+    }
+    for (const m of same) {
+      const key = modelKey(m[0], m[1], m[2]);
+      if (found.has(key)) continue;
+      found.add(key);
+      if (m[7] == null || Math.abs(m[7] - r.cost) >= 0.005 || m[5])
+        changes.push({ type: "price", key, mfr, name: m[1], style: m[2], fam: m[3], older: !!m[5], oldCost: m[7], newCost: round2(r.cost), oldTier: m[4], newTier: tierFor(r.cost) });
+    }
+  }
+  return { read: rows.length, matched: found.size, total: mine.filter((m) => !m[5]).length, changes, added, missing: [], other };
 }
 
 /* ── Admin PIN (scrambled with a salt; starts as 0000 until changed) ── */
@@ -160,7 +192,10 @@ export function nextData({ changes, pin, brands }) {
   }
   const lists = { ...PRICE_LISTS };
   brands.forEach((b) => { lists[b] = today(); });
-  return { v: 1, updated: today(), lists, models, costs, raw, pin: pin || STATE.pin || undefined };
+  // companies added by hand (not built in) that still have models
+  const mfrs = [...new Set([...MFRS.map(([n]) => n), ...models.map((m) => m[0])])].filter((n) => !BUILT_MFRS.includes(n) && models.some((m) => m[0] === n));
+  mfrs.forEach((n) => { lists[n] ||= today(); });
+  return { v: 1, updated: today(), lists, models, costs, raw, mfrs, pin: pin || STATE.pin || undefined };
 }
 
 /** A copy of this page (as loaded) with `data` built in, replacing an earlier saved block if there is one. */
@@ -190,5 +225,6 @@ export function useData(data) {
   Object.keys(RAW).forEach((k) => delete RAW[k]);
   Object.assign(RAW, data.raw);
   Object.assign(PRICE_LISTS, data.lists);
+  (data.mfrs || []).forEach((n) => { if (!MFRS.some(([x]) => x === n)) MFRS.push([n, "var(--label3)"]); });
   if (data.pin) STATE.pin = data.pin;
 }
