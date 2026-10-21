@@ -85,7 +85,9 @@ export async function contractBlob(s) {
   if (s.incl === "all") tick(s.n === 2 ? BOX.fit845 : BOX.fit595, BASE.fit);
   text(num(q.aids), 264, 589.5, 84);
   text(num(q.supplies), 264, 617, 84);
-  text(num(q.total), 227, 727, 94);
+  // Total Charges upon Dispense: larger and bold so it stands out
+  const bold = await pdf.embedFont(StandardFonts.HelveticaBold);
+  page.drawText(num(q.total), { x: 227, y: H - 728, size: 15, font: bold, color: INK });
 
   // Page 1 — I. Fitting, Orientation & Dispense Fees (only when the fitting is part of the order)
   const p1 = pdf.getPage(0);
