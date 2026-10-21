@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { ChevronRight, Copy, Plus, Printer, RotateCcw, TriangleAlert, X } from "lucide-react";
+import { ChevronRight, Copy, FileSignature, Plus, Printer, RotateCcw, TriangleAlert, X } from "lucide-react";
 import { NavBar, NavButton, ThemeButton, Group, Row, Switch, Sheet, PriceBar, Capsule, Pills, FieldRow, BHSC_LOGO } from "@/components/ios";
 import { UndoPill } from "@/components/ui/undo-pill";
 import { EarOrder, blankEar } from "@/components/order";
@@ -10,6 +10,7 @@ import {
   EAR_NAMES, mixed, earsInUse, earModel, orderReady, orderMfrs, accessoriesFor, accessoryPrice, earPrice, MIXED_CONFIRMED, refund, crosPair, includedText,
 } from "@/lib/pricing";
 import { copyText } from "@/lib/copy";
+import { CONTRACT_URL, contractBlob } from "@/lib/contract";
 
 // One page, laid out for a computer: the order at the top, the estimate and refund under it, updating as it is filled in.
 const blank = () => ({ n: null, same: true, ears: [blankEar(), blankEar()], incl: "all", molds: 0, addons: [], moldEar: "R", notes: "", caseNo: "", code: "" });
@@ -203,6 +204,7 @@ function Receipt({ s, set, onCopy, onReset }) {
       <div className="flex flex-wrap gap-2">
         <Capsule className="h-10 px-4 text-[15px]" onClick={copy}><Copy className="h-4 w-4" strokeWidth={2.4} />Copy estimate</Capsule>
         <Capsule className="h-10 px-4 text-[15px]" variant="tinted" onClick={() => window.print()}><Printer className="h-4 w-4" strokeWidth={2.4} />Print</Capsule>
+        {CONTRACT_URL && <Capsule className="h-10 px-4 text-[15px]" variant="tinted" onClick={() => printContract(s)}><FileSignature className="h-4 w-4" strokeWidth={2.4} />Print contract</Capsule>}
         <Capsule className="h-10 px-4 text-[15px]" variant="tinted" onClick={onReset}><RotateCcw className="h-4 w-4" strokeWidth={2.4} />New patient</Capsule>
       </div>
       {createPortal(<PrintSheet lines={lines} total={total} code={code} date={date} what={what} s={s} included={includedText(ms.map((m) => m[4]))} />, document.body)}
@@ -214,6 +216,20 @@ function Receipt({ s, set, onCopy, onReset }) {
       )}
     </div>
   );
+}
+
+/* Prints BHSC's purchase agreement with page 2 filled in: the filled PDF loads in a hidden frame and the
+   browser's print dialog opens on it (also offers "Save as PDF"). Works from a web server or a network share. */
+async function printContract(s) {
+  const url = URL.createObjectURL(await contractBlob(s));
+  const frame = Object.assign(document.createElement("iframe"), { src: url, title: "Purchase agreement" });
+  frame.setAttribute("style", "position:fixed;right:0;bottom:0;width:0;height:0;border:0;visibility:hidden");
+  frame.onload = () => setTimeout(() => {
+    try { frame.contentWindow.focus(); frame.contentWindow.print(); }
+    catch { Object.assign(document.createElement("a"), { href: url, download: "Purchase agreement.pdf" }).click(); }
+  }, 150);
+  document.body.appendChild(frame);
+  setTimeout(() => { frame.remove(); URL.revokeObjectURL(url); }, 10 * 60 * 1000);
 }
 
 /* What Print puts on paper: only this sheet (see "@media print" in index.css). The patient's estimate

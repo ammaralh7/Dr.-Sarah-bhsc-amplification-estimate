@@ -93,6 +93,16 @@ export function quoteLines(s) {
 }
 export const quoteTotal = (s) => Math.round(quoteLines(s).reduce((a, l) => a + l.amount, 0) * 100) / 100;
 
+/* The estimate split the way BHSC's purchase agreement adds it up (page 2, Patient Charges Summary). */
+export function quoteParts(s) {
+  if (!orderReady(s)) return null;
+  const k = s.n === 2 ? 1 : 0;
+  const aids = mixed(s) ? s.ears.reduce((a, e) => a + earAmount(s, earModel(e)), 0) : TIERS[earModel(s.ears[0])[4]][k];
+  const fit = s.incl === "all" ? FEES.fit[k] : 0, ship = s.incl === "all" ? FEES.ship : 0;
+  const molds = FEES.molds[s.molds] || 0, acc = s.addons.reduce((a, x) => a + x.price, 0);
+  return { aids, fit, ship, molds, acc, supplies: r2(molds + acc), total: r2(aids + fit + ship + molds + acc) };
+}
+
 /* Returns — BHSC "Private Pay & Non-MCD Insurance Hearing Aid Return Process" (effective 10/29/2024).
    Full return: the patient gets back the total paid minus what BHSC keeps: 5% of the hearing aid
    charge, 5% of each service code (92641/92594, V5011, V5020, dispense = the fitting fee) and a
