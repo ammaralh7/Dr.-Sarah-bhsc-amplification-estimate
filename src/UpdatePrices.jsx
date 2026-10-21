@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ArrowLeft, ArrowRight, Check, ClipboardPaste, Download, KeyRound, Lock, Plus, TriangleAlert } from "lucide-react";
 import { NavBar, ThemeButton, SearchField, Pills, Capsule } from "@/components/ios";
-import { MODELS, MFRS, PRICE_LISTS, TIERS, FAMILIES, modelKey, money, tierFor } from "@/lib/pricing";
+import { MODELS, MFRS, PRICE_LISTS, TIERS, FAMILIES, HAS_COSTS, modelKey, money, tierFor } from "@/lib/pricing";
 import { readPriceList, styleLabel, checkPin, makePin, nextData, savedPage, downloadPage, useData } from "@/lib/priceupdate";
 import { cn } from "@/lib/utils";
 
@@ -223,6 +223,7 @@ function Paste({ onBack, onUse }) {
                 {line(!r.added.length, r.added.length, `new ${r.added.length === 1 ? "model" : "models"} not in the app yet`)}
                 {!typed && line(!missing.length, missing.length, `${missing.length === 1 ? "model" : "models"} missing from the new list`, missing.length > 0)}
               </ul>
+              {!HAS_COSTS && r.changes.length > 0 && <p className="text-[13px] leading-snug text-label2">This copy has no BHSC prices built in, so every price on the list counts as new. The tier on the next screen shows whether the patient price changes.</p>}
               {lowMatch && <p className="text-[13px] leading-snug text-warn-ink">Most models weren’t found. Is this the full {mfr} list, copied with Ctrl+A?</p>}
               {missing.length > 0 && <p className="text-[13px] leading-snug text-label2">Missing models stay in the app unless you choose to remove them on the next screen.</p>}
             </>
