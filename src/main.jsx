@@ -1,3 +1,4 @@
+import "@/lib/snapshot"; // first: capture the page before the app changes it
 import React from "react";
 import ReactDOM from "react-dom/client";
 import App from "./App.jsx";

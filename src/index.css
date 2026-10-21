@@ -16,6 +16,7 @@
   --sep: rgba(60, 60, 67, 0.29); --fill: rgba(118, 118, 128, 0.12); --fill2: rgba(120, 120, 128, 0.2);
   --tint: #0082cd; --tint-ink: #ffffff; --tint-soft: rgba(0, 130, 205, 0.1);
   --warn: #fff4e0; --warn-ink: #8a4b00;
+  --ok: #e3f5e8; --ok-ink: #1a7f37; --bad: #d70015;
   --material: rgba(249, 249, 249, 0.8); --thumb: #ffffff; --logo-filter: none;
   --resound: #c8102e; --phonak: #3e8e41; --oticon: #6a2c91; --starkey: #d9600a;
 }
@@ -27,6 +28,7 @@
     --sep: rgba(84, 84, 88, 0.65); --fill: rgba(118, 118, 128, 0.24); --fill2: rgba(120, 120, 128, 0.36);
     --tint: #40aef0; --tint-ink: #00233a; --tint-soft: rgba(64, 174, 240, 0.16);
     --warn: #3a2a10; --warn-ink: #ffd08a;
+    --ok: #12301c; --ok-ink: #7ee2a0; --bad: #ff6961;
     --material: rgba(28, 28, 30, 0.78); --thumb: #636366; --logo-filter: brightness(1.5) saturate(1.1);
     --resound: #ff6378; --phonak: #72c975; --oticon: #bd92e4; --starkey: #ff9d52;
   }
@@ -38,6 +40,7 @@
   --sep: rgba(84, 84, 88, 0.65); --fill: rgba(118, 118, 128, 0.24); --fill2: rgba(120, 120, 128, 0.36);
   --tint: #40aef0; --tint-ink: #00233a; --tint-soft: rgba(64, 174, 240, 0.16);
   --warn: #3a2a10; --warn-ink: #ffd08a;
+  --ok: #12301c; --ok-ink: #7ee2a0; --bad: #ff6961;
   --material: rgba(28, 28, 30, 0.78); --thumb: #636366; --logo-filter: brightness(1.5) saturate(1.1);
   --resound: #ff6378; --phonak: #72c975; --oticon: #bd92e4; --starkey: #ff9d52;
 }

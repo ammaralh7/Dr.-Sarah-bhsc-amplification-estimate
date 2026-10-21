@@ -1,22 +1,28 @@
 import { useState } from "react";
-import { Columns3, PanelLeft, ReceiptText, Tags } from "lucide-react";
+import { Columns3, PanelLeft, ReceiptText, RefreshCw, Tags } from "lucide-react";
 import Estimate from "@/Estimate";
 import HAPrices from "@/HAPrices";
 import Compare from "@/Compare";
+import UpdatePrices from "@/UpdatePrices";
 import { BHSC_LOGO } from "@/components/ios";
 import { cn } from "@/lib/utils";
-import { MFRS, PRICE_LISTS } from "@/lib/pricing";
+import { MFRS, PRICE_LISTS, PRICES_UPDATED, HAS_COSTS } from "@/lib/pricing";
 import { Drawer as SideDrawer } from "@/components/ui/side-drawer";
 import { BlurFade } from "@/components/ui/blur-fade";
 
 // The Medicaid tab (Medicaid.jsx) is off for now at BHSC's request; add it back here to bring it back.
-// Prices are built into the page: to update them, rebuild from new price lists (see the README).
-const TABS = [["estimate", "Estimate", ReceiptText], ["compare", "Compare prices", Columns3], ["haprices", "2026 HA prices", Tags]];
+// "Update prices" (admin PIN) saves a copy of the page with new prices built in; it needs BHSC's costs,
+// so a copy built without them (the public one) doesn't have it.
+const TABS = [["estimate", "Estimate", ReceiptText], ["compare", "Compare prices", Columns3], ["haprices", "2026 HA prices", Tags],
+  ...(HAS_COSTS ? [["update", "Update prices", RefreshCw]] : [])];
 
 export default function App() {
   const [tab, setTab] = useState("estimate");
   const [open, setOpen] = useState(false);
   const [seed, setSeed] = useState(null);
+  // bumped after new prices are saved, so the other tabs start over with them
+  const [version, setVersion] = useState(0);
+  const [updated, setUpdated] = useState(PRICES_UPDATED);
   const go = (t) => { setTab(t); setOpen(false); window.scrollTo(0, 0); };
 
   const menu = (
@@ -44,13 +50,14 @@ export default function App() {
         </nav>
       </SideDrawer>
 
-      <div hidden={tab !== "estimate"}><Estimate menu={menu} seed={seed} /></div>
+      <div hidden={tab !== "estimate"}><Estimate key={version} menu={menu} seed={seed} /></div>
       {/* Compare stays mounted so the options are still there after a trip to the estimate */}
-      <div hidden={tab !== "compare"}><Compare menu={menu} onUse={(pick) => { setSeed({ ...pick }); go("estimate"); }} /></div>
-      {tab === "haprices" && <BlurFade key="haprices"><HAPrices menu={menu} /></BlurFade>}
+      <div hidden={tab !== "compare"}><Compare key={version} menu={menu} onUse={(pick) => { setSeed({ ...pick }); go("estimate"); }} /></div>
+      {tab === "haprices" && <BlurFade key={`haprices-${version}`}><HAPrices menu={menu} /></BlurFade>}
+      {HAS_COSTS && <div hidden={tab !== "update"}><UpdatePrices menu={menu} onSaved={(d) => { setSeed(null); setUpdated(d.updated); setVersion((v) => v + 1); }} /></div>}
       {/* Version line: which price lists this copy uses and when it was built */}
       <footer className="mx-auto max-w-2xl px-4 pb-28 pt-2 text-[12px] leading-snug text-label3 lg:max-w-6xl lg:pb-6">
-        BHSC Amplification Estimate · 2026 tier pricing · Price lists: {MFRS.map(([m]) => `${m} ${PRICE_LISTS[m] || "2026"}`).join(", ")} · Built {__BUILD_DATE__}
+        BHSC Amplification Estimate · 2026 tier pricing · Price lists: {MFRS.map(([m]) => `${m} ${PRICE_LISTS[m] || "2026"}`).join(", ")}{updated ? ` · Prices updated ${updated}` : ""} · Built {__BUILD_DATE__}
       </footer>
     </>
   );
