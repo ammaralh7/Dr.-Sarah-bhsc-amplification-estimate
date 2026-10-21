@@ -8,6 +8,7 @@ A hearing-aid pricing website for Dr. Sarah Alhorebi, audiologist at Buffalo Hea
   - **Accessories:** each with its patient price, and any other accessory can be added by hand.
   - **Refund if returned:** works out the refund from BHSC's return policy: the total paid minus what BHSC keeps (5% of the hearing aid charge, 5% of the fitting and dispense codes, and a $200 one-aid or $300 two-aid service fee). *Show the math* opens the line-by-line breakdown: 5% of each fitting and dispense code, 5% of the hearing aids, the fee, total paid and the refund. Returning one side of a pair has no penalty.
   - **CROS/BiCROS:** priced as a one-aid CROS plus a one-aid hearing aid, as the 2026 tier pricing says.
+  - **Print contract:** prints BHSC's hearing aid purchase agreement with pages 1 and 2 filled in from the estimate (billing code, fitting and dispense, hearing aid table, tier, earmolds, accessories and totals). Serial numbers, warranty dates and signatures are filled by hand.
 - **Compare prices:** up to four hearing aids side by side for one patient, with the cheapest marked and how much more the others cost. *Use in estimate* opens the Estimate with the one the patient picks.
 - **2026 HA prices:** every hearing aid on the current 2026 lists with its tier and BHSC's net price from the manufacturer's price list, one manufacturer at a time (with style buttons and a search across all four). Each model is listed once, with styles that share a price on one line, in two columns on a computer. A copy built without the confidential cost file shows the tiers only.
 
@@ -28,7 +29,7 @@ This runs `vite build` and then `postbuild.py`, and writes `dist/index.html`.
 
 ## Not in this repo
 
-BHSC's own costs per hearing aid (`src/data/costs.json`) and the manufacturer price lists are confidential and stay in the clinic's private copy. Without the cost file the app builds the same way; the 2026 HA prices tab just doesn't show a cost column, and the Update prices tab (admin PIN; paste a new price list or edit a model, then save an updated copy of the app) is left out, since it works on those costs.
+BHSC's own costs per hearing aid (`src/data/costs.json`) and the manufacturer price lists are confidential and stay in the clinic's private copy. Without the cost file the app builds the same way; the 2026 HA prices tab just doesn't show a cost column. The Update prices tab (admin PIN `0000`; paste a new price list or edit a model, then save an updated copy of the app) works here too; with no costs built in, every pasted price counts as new and the tiers show what changed.
 
 ## Built with
 
