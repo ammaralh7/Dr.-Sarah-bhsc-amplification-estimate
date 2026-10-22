@@ -6,13 +6,14 @@ import Compare from "@/Compare";
 import UpdatePrices from "@/UpdatePrices";
 import { BHSC_LOGO } from "@/components/ios";
 import { cn } from "@/lib/utils";
-import { MFRS, PRICE_LISTS, PRICES_UPDATED } from "@/lib/pricing";
+import { MFRS, PRICE_LISTS, PRICES_UPDATED, POLICY } from "@/lib/pricing";
 import { Drawer as SideDrawer } from "@/components/ui/side-drawer";
 import { BlurFade } from "@/components/ui/blur-fade";
 
 // The Medicaid tab (Medicaid.jsx) is off for now at BHSC's request; add it back here to bring it back.
 // "Update prices" (admin PIN) saves a copy of the page with new prices built in.
-const TABS = [["estimate", "Estimate", ReceiptText], ["compare", "Compare prices", Columns3], ["haprices", "2026 HA prices", Tags], ["update", "Update prices", RefreshCw]];
+// the HA prices tab is named for the year of BHSC's tier pricing (Update prices → BHSC prices & fees)
+const tabs = () => [["estimate", "Estimate", ReceiptText], ["compare", "Compare prices", Columns3], ["haprices", `${POLICY.year} HA prices`, Tags], ["update", "Update prices", RefreshCw]];
 
 export default function App() {
   const [tab, setTab] = useState("estimate");
@@ -38,7 +39,7 @@ export default function App() {
         className="pb-[env(safe-area-inset-bottom,0px)] pt-[env(safe-area-inset-top,0px)]">
         <img src={BHSC_LOGO} alt="BHSC" className="bhsc-logo mb-4 ml-1 mt-1 block h-auto w-[104px]" draggable="false" />
         <nav aria-label="Sections" className="flex flex-col gap-1">
-          {TABS.map(([id, label, Icon]) => (
+          {tabs().map(([id, label, Icon]) => (
             <button key={id} type="button" onClick={() => go(id)} aria-current={tab === id ? "page" : undefined}
               className={cn("press flex items-center gap-3 rounded-[10px] px-3 py-3 text-[17px] font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-tint",
                 tab === id ? "bg-tint-soft text-tint" : "text-label hover:bg-fill")}>
@@ -55,7 +56,7 @@ export default function App() {
       <div hidden={tab !== "update"}><UpdatePrices menu={menu} onSaved={(d) => { setSeed(null); setUpdated(d.updated); setVersion((v) => v + 1); }} /></div>
       {/* Version line: which price lists this copy uses and when it was built */}
       <footer className="mx-auto max-w-2xl px-4 pb-28 pt-2 text-[12px] leading-snug text-label3 lg:max-w-6xl lg:pb-6">
-        BHSC Amplification Estimate · 2026 tier pricing · Price lists: {MFRS.map(([m]) => `${m} ${PRICE_LISTS[m] || "2026"}`).join(", ")}{updated ? ` · Prices updated ${updated}` : ""} · Built {__BUILD_DATE__}
+        BHSC Amplification Estimate · {POLICY.year} tier pricing · Price lists: {MFRS.map(([m]) => `${m} ${PRICE_LISTS[m] || POLICY.year}`).join(", ")}{updated ? ` · Prices updated ${updated}` : ""} · Built {__BUILD_DATE__}
       </footer>
     </>
   );

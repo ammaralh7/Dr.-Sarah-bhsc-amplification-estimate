@@ -1,8 +1,8 @@
 import { useMemo, useState } from "react";
 import { NavBar, ThemeButton, SearchField, Pills } from "@/components/ios";
-import { MODELS, MFRS, HAS_COSTS } from "@/lib/pricing";
+import { MODELS, MFRS, HAS_COSTS, POLICY } from "@/lib/pricing";
 
-// Every hearing aid on the current 2026 lists with its tier and BHSC's net price (the "net price" /
+// Every hearing aid on the current lists with its tier and BHSC's net price (the "net price" /
 // account price on the manufacturer's price list, per aid). One manufacturer at a time, each model
 // once with its styles under it, in two columns on a computer. Searching looks across all four.
 const usd = (n) => "$" + n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -31,7 +31,7 @@ export default function HAPrices({ menu = null }) {
 
   return (
     <div className="min-h-screen pb-16">
-      <NavBar wide compact title="2026 HA prices" subtitle={HAS_COSTS ? "BHSC's net price for every hearing aid on the 2026 lists" : "Every hearing aid on the 2026 lists and its tier"} left={menu} right={<ThemeButton />} />
+      <NavBar wide compact title={`${POLICY.year} HA prices`} subtitle={HAS_COSTS ? `BHSC's net price for every hearing aid on the ${POLICY.year} lists` : `Every hearing aid on the ${POLICY.year} lists and its tier`} left={menu} right={<ThemeButton />} />
       <main className="mx-auto grid max-w-2xl grid-cols-1 gap-4 px-4 pt-3 lg:max-w-6xl">
         <div className="flex min-w-0 flex-wrap items-center gap-x-5 gap-y-2.5 rounded-[12px] bg-card px-4 py-2.5">
           <div className="w-full sm:w-72"><SearchField value={q} onChange={setQ} placeholder="Search all models" /></div>

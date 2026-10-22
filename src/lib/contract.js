@@ -6,7 +6,7 @@
    The PDF is optional, like costs.json: a copy built without it hides the button. Positions are in PDF
    points from the top-left of page 2 (612 × 792), measured on the 1/13/26 form. */
 import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
-import { FEES, quoteParts, billingBoxes, earsInUse, earModel, mixed } from "@/lib/pricing";
+import { FEES, POLICY, dispenseFee, quoteParts, billingBoxes, earsInUse, earModel, mixed } from "@/lib/pricing";
 
 const FILES = import.meta.glob("../assets/purchase-agreement.pdf", { eager: true, query: "?url", import: "default" });
 export const CONTRACT_URL = Object.values(FILES)[0] || null;
@@ -29,6 +29,16 @@ const battery = (m) => {
   if (/10 battery|\.10\b/.test(t)) return "10";
   return "";
 };
+// Fees printed on the 1/13/26 form: [page, x of "$", right edge, baseline, printed amount, current amount, bold].
+// When BHSC's fee differs (Update prices → BHSC prices & fees), the printed amount is covered and the current one
+// printed in its place, as for the earmolds; with the 2026 fees nothing is covered.
+const PRINTED = () => [
+  [0, 66.0, 90.0, 425.5, 595, FEES.fit[0], true], [0, 264.0, 282.0, 453.1, 55, POLICY.codes[2]], [0, 263.7, 287.7, 468.7, 160, POLICY.codes[1]],
+  [0, 540.1, 564.1, 468.7, 250, dispenseFee(0)], [0, 264.0, 288.0, 484.6, 130, POLICY.codes[0]], [0, 540.1, 564.1, 484.6, 250, dispenseFee(0)],
+  [0, 66.0, 90.0, 512.6, 845, FEES.fit[1], true], [0, 273.5, 291.5, 539.0, 55, POLICY.codes[2]], [0, 272.7, 296.7, 554.6, 160, POLICY.codes[1]],
+  [0, 540.1, 564.1, 554.6, 500, dispenseFee(1)], [0, 273.0, 297.0, 570.5, 130, POLICY.codes[0]], [0, 540.1, 564.1, 570.5, 500, dispenseFee(1)],
+  [1, 268.6, 294.5, 563.0, 595, FEES.fit[0]], [1, 337.6, 363.5, 563.0, 845, FEES.fit[1]],
+];
 const num = (v) => v.toLocaleString("en-US", { minimumFractionDigits: v % 1 ? 2 : 0, maximumFractionDigits: 2 });
 
 export async function contractBlob(s) {
@@ -50,6 +60,17 @@ export async function contractBlob(s) {
   [[178.8, 1], [435.5, 2]].forEach(([x, n]) => {
     page.drawRectangle({ x: x - 0.5, y: H - 406, width: 26, height: 14, color: rgb(1, 1, 1) });
     page.drawText(`$${FEES.molds[n]}`, { x, y: H - 403, size: 12, font: times, color: rgb(0, 0, 0) });
+  });
+
+  const timesBold = await pdf.embedFont(StandardFonts.TimesRomanBold);
+  PRINTED().forEach(([pg, x0, x1, baseline, printed, now, isBold]) => {
+    if (now === printed) return;
+    const f = isBold ? timesBold : times, t = `$${num(now)}`, room = x1 - x0 + 3;
+    let sz = 12;
+    while (sz > 7 && f.widthOfTextAtSize(t, sz) > room) sz -= 0.5;
+    const pp = pdf.getPage(pg);
+    pp.drawRectangle({ x: x0 - 0.5, y: H - baseline - 3, width: x1 - x0 + 1.5, height: 14, color: rgb(1, 1, 1) });
+    pp.drawText(t, { x: x0, y: H - baseline, size: sz, font: f, color: INK });
   });
 
   // Top of page 2: the hearing aid billing code

@@ -8,6 +8,7 @@ import { cn } from "@/lib/utils";
 import {
   MODELS, ADDONS, TIERS, FEES, MFRS, STYLES, money, fits, isCros, styleAvailable, modelsFor, billingCode, quoteLines, quoteTotal, modelKey,
   EAR_NAMES, mixed, earsInUse, earModel, orderReady, orderMfrs, accessoriesFor, accessoryPrice, earPrice, MIXED_CONFIRMED, refund, crosPair, includedText,
+  POLICY, pct,
 } from "@/lib/pricing";
 import { copyText } from "@/lib/copy";
 import { CONTRACT_URL, contractBlob } from "@/lib/contract";
@@ -143,7 +144,7 @@ function Receipt({ s, set, onCopy, onReset }) {
   const date = new Date().toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
   const [fallback, setFallback] = useState("");
   const warnings = [];
-  if (crosPair(s)) warnings.push("CROS/BiCROS — priced as a one-aid CROS plus a one-aid hearing aid, per the 2026 tier pricing.");
+  if (crosPair(s)) warnings.push(`CROS/BiCROS — priced as a one-aid CROS plus a one-aid hearing aid, per the ${POLICY.year} tier pricing.`);
   else if (mixed(s) && !MIXED_CONFIRMED) warnings.push("Different aid in each ear — mixed-pair pricing isn’t confirmed yet. Check the total before quoting.");
   if (s.n === 2 && !mixed(s) && ms.some(isCros)) warnings.push("A CROS transmitter goes on one ear. For a CROS/BiCROS, turn off “Same aid in both ears” and choose the hearing aid for the other ear.");
   if (ms.some((m) => m[5])) warnings.push("Older price list — confirm the cost with the manufacturer before ordering.");
@@ -303,9 +304,9 @@ function Refund({ s }) {
           <span className="hidden group-open:inline">Hide</span>
         </summary>
       <ul className="mt-1.5 grid list-disc gap-1 pl-5">
-        <li>BHSC keeps only the 5%s and the service fee; everything else the patient paid is refunded.</li>
+        <li>BHSC keeps only the {pct(POLICY.returnKeep)}s and the service fee; everything else the patient paid is refunded.</li>
         <li>If insurance paid for any codes, billing returns 100% of the insurance payment to the insurance. The refund comes out of what the patient paid.</li>
-        <li>Exchanges: no service fee and no 5%. The patient pays only the difference in hearing aid price. A second exchange is treated as a return plus a new sale.</li>
+        <li>Exchanges: no service fee and no {pct(POLICY.returnKeep)}. The patient pays only the difference in hearing aid price. A second exchange is treated as a return plus a new sale.</li>
         <li>Not for TruHearing / Start Hearing programs or Medicaid. Billing completes the return worksheet.</li>
       </ul>
       </details>
@@ -329,11 +330,11 @@ function RefundMath({ m, pair }) {
         <span className="group-open/math:hidden">Show the math</span><span className="hidden group-open/math:inline">Hide the math</span>
       </summary>
       <div className="mt-2 rounded-[12px] bg-card px-4 py-3 text-[14px] leading-snug">
-        <div className="mb-1 text-[12px] font-semibold uppercase tracking-[0.03em] text-label2">5% of the following</div>
+        <div className="mb-1 text-[12px] font-semibold uppercase tracking-[0.03em] text-label2">{pct(POLICY.returnKeep)} of the following</div>
         {m.codes.map((c) => <Line key={c.code} label={<>{c.code} <span className="text-label2">· {c.name} ({usd(c.charge)})</span></>} value={usd(c.keep)} />)}
         {m.codes.length > 0 && <Line label={<span className="text-label2">Fitting & dispense codes</span>} value={usd(m.keepFit)} top />}
-        <Line label={<>5% of {pair ? "hearing aids" : "hearing aid"} <span className="text-label2">({usd(m.aidPaid)})</span></>} value={usd(m.keepAid)} top={m.codes.length > 0} />
-        <Line label="Total 5% kept" value={usd(m.keep5)} strong top />
+        <Line label={<>{pct(POLICY.returnKeep)} of {pair ? "hearing aids" : "hearing aid"} <span className="text-label2">({usd(m.aidPaid)})</span></>} value={usd(m.keepAid)} top={m.codes.length > 0} />
+        <Line label={`Total ${pct(POLICY.returnKeep)} kept`} value={usd(m.keep5)} strong top />
         <Line label={<>+ Service fee <span className="text-label2">({pair ? "two aids" : "one aid"} returned)</span></>} value={usd(m.fee)} />
         <Line label="BHSC keeps" value={usd(m.kept)} strong top />
         <Line label="Total paid" value={usd(m.paid)} top />
@@ -377,7 +378,7 @@ function AccessorySheet({ open, onClose, s, set, list, mfrs }) {
           <p className="px-4 text-[15px] text-label2">{mfrs.length ? `No accessory list for ${mfrs.join(" or ")} yet.` : "Choose a manufacturer to see its accessories."} Add one below with its BHSC cost.</p>
         )}
 
-        <Group header="Other accessory" footer={c > 0 ? `Patient price ${money(accessoryPrice(c))} (cost ${money(c)} × 1.2)` : "Enter BHSC’s cost; the patient price is cost × 1.2."}>
+        <Group header="Other accessory" footer={c > 0 ? `Patient price ${money(accessoryPrice(c))} (cost ${money(c)} × ${POLICY.markup})` : `Enter BHSC’s cost; the patient price is cost × ${POLICY.markup}.`}>
           <FieldRow label="Name" value={name} onChange={setName} placeholder="e.g. TV Streamer" />
           <FieldRow label="BHSC cost" value={cost} onChange={setCost} placeholder="$0.00" inputMode="decimal" last
             onKeyDown={(e) => e.key === "Enter" && add()} />
