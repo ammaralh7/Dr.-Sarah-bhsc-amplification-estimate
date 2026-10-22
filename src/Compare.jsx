@@ -3,7 +3,7 @@ import { ArrowRight, Copy, Plus, RotateCcw, X } from "lucide-react";
 import { NavBar, NavButton, ThemeButton, Group, Row, Capsule, Pills } from "@/components/ios";
 import { EarOrder, blankEar } from "@/components/order";
 import { UndoPill } from "@/components/ui/undo-pill";
-import { FEES, money, quoteLines, quoteTotal, earModel, hasLace, includedText } from "@/lib/pricing";
+import { FEES, POLICY, money, quoteLines, quoteTotal, earModel, hasLace, includedText } from "@/lib/pricing";
 import { cn } from "@/lib/utils";
 import { copyText } from "@/lib/copy";
 
@@ -120,7 +120,7 @@ export default function Compare({ menu = null, onUse }) {
             <textarea readOnly value={fallback} onFocus={(ev) => ev.target.select()} autoFocus className="h-44 w-full rounded-[12px] bg-card p-3 text-[15px] text-label outline-none" />
           </div>
         )}
-        <p className="-mt-3 text-[13px] text-label2">Patient prices from the BHSC 2026 tier pricing. Accessories aren’t included; add them in the estimate.</p>
+        <p className="-mt-3 text-[13px] text-label2">Patient prices from the BHSC {POLICY.year} tier pricing. Accessories aren’t included; add them in the estimate.</p>
       </main>
 
       <div className="pointer-events-none fixed inset-x-0 bottom-[calc(1.5rem+env(safe-area-inset-bottom,0px))] z-50 flex justify-center px-4">

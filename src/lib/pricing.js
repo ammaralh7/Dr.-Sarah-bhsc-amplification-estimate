@@ -21,18 +21,42 @@ export const MODELS = (SAVED?.models || data.models).map((m) => [...m.slice(0, 7
 export const RAW = { ...(SAVED?.raw || data.raw || {}) };
 export const PRICES_UPDATED = SAVED?.updated || null;
 
-/* BHSC 2026 tier bands on invoice cost per unit (below $210 → tier 1). */
-export const BANDS = [[210, 1], [301, 2], [380, 3], [460, 4], [551, 5], [652, 6], [763, 7], [901, 8], [1011, 9], [1201, 10], [1361, 11]];
+/* BHSC's own pricing (the yearly tier sheet, fees and return rules). Staff change it in Update prices →
+   BHSC prices & fees; a saved copy of the app carries its values (SAVED.pricing), otherwise these 2026
+   defaults apply. TIERS, BANDS and FEES are filled in place from it, so every screen reads the current
+   values. bands = lowest BHSC cost (invoice, per aid) for each tier; anything below the first is tier 1.
+   codes = V5020, V5011 and 92594 charges inside the fitting fee; the dispense code is the rest. */
+export const DEFAULT_POLICY = {
+  year: "2026",
+  tiers: [[410, 800], [515, 1025], [615, 1230], [760, 1515], [900, 1790], [1055, 2210], [1230, 2465], [1395, 2780], [1650, 3300], [1870, 3850], [2015, 4025]],
+  bands: [210, 301, 380, 460, 551, 652, 763, 901, 1011, 1201, 1361],
+  fit: [595, 845], ship: 25, molds: [115, 215], codes: [130, 160, 55],
+  markup: 1.2, laceFrom: 7, visits: 4, returnKeep: 0.05, serviceFee: [200, 300],
+};
+export const POLICY = {};
+export const TIERS = {};
+export const BANDS = [];
+export const FEES = { fit: [], ship: 0, molds: [] };
+export function applyPolicy(p) {
+  Object.assign(POLICY, JSON.parse(JSON.stringify({ ...DEFAULT_POLICY, ...p })));
+  Object.keys(TIERS).forEach((k) => delete TIERS[k]);
+  POLICY.tiers.forEach((t, i) => { TIERS[i + 1] = t; });
+  BANDS.length = 0;
+  POLICY.bands.forEach((lo, i) => BANDS.push([lo, i + 1]));
+  Object.assign(FEES, { fit: POLICY.fit, ship: POLICY.ship, molds: [0, ...POLICY.molds] });
+}
+applyPolicy(SAVED?.pricing || {});
+export const pct = (f) => `${Math.round(f * 1000) / 10}%`;
 export const tierFor = (cost) => BANDS.reduce((t, [lo, n]) => (cost >= lo ? n : t), 1);
 export const FAMILIES = ["RIC", "BTE", "ITE", "ITC", "CIC", "IIC", "CUSTOM", "ALL"];
 // Style shown for a model added by hand without one
 export const famStyle = (fam) => ({ ALL: "All styles · one price per level", CUSTOM: "Custom · ITE / ITC / CIC / IIC" })[fam] || fam;
 
 export const findModel = (mfr, name, style) => MODELS.findIndex((m) => modelKey(m[0], m[1], m[2]) === modelKey(mfr, name, style));
-export const ADDONS = data.addons;
+export const ADDONS = JSON.parse(JSON.stringify(SAVED?.addons || data.addons));
 export const PRICE_LISTS = { ...(SAVED?.lists || data.lists || {}) };
-export const TIERS = {1:[410,800],2:[515,1025],3:[615,1230],4:[760,1515],5:[900,1790],6:[1055,2210],7:[1230,2465],8:[1395,2780],9:[1650,3300],10:[1870,3850],11:[2015,4025]};
-export const FEES = { fit: [595, 845], ship: 25, molds: [0, 115, 215] };
+// Which number on each company's list is BHSC's price, when staff had to pick it (Update prices)
+export const COLUMNS = { ...(SAVED?.columns || {}) };
 export const BUILT_MFRS = ["ReSound", "Phonak", "Oticon", "Starkey", "Signia"];
 // Companies added with "Update prices" come after the built-in ones, with a plain grey dot
 export const MFRS = [...BUILT_MFRS.map((n) => [n, `var(--${n.toLowerCase()})`]),
@@ -50,14 +74,12 @@ export const styleAvailable = (mfr, st) => MODELS.some((m) => m[0] === mfr && fi
 export const modelsFor = (mfr, st) => MODELS.map((m, i) => [m, i]).filter(([m]) => m[0] === mfr && fits(m[3], st));
 
 /* Included with every price: up to 4 follow-up visits in the first year (2026 tier pricing). Tiers 7–11
-   also include the LACE AI program (BHSC handover: "LACE AI is included in tiers 7–11"). */
-export const LACE_FROM_TIER = 7;
-export const hasLace = (tiers) => tiers.some((t) => t >= LACE_FROM_TIER);
-export const includedText = (tiers) => `Includes up to 4 follow-up visits in the first year${hasLace(tiers) ? " and the LACE AI program" : ""}.`;
+   also include the LACE AI program (BHSC handover: "LACE AI is included in tiers 7–11"). Both in POLICY. */
+export const hasLace = (tiers) => tiers.some((t) => t >= POLICY.laceFrom);
+export const includedText = (tiers) => `Includes up to ${POLICY.visits} follow-up visits in the first year${hasLace(tiers) ? " and the LACE AI program" : ""}.`;
 
-/* Accessories: patient price = BHSC cost × 1.2, to the cent. */
-export const ACCESSORY_MARKUP = 1.2;
-export const accessoryPrice = (cost) => Math.round(cost * ACCESSORY_MARKUP * 100) / 100;
+/* Accessories: patient price = BHSC cost × the markup (1.2 in 2026), to the cent. */
+export const accessoryPrice = (cost) => Math.round(cost * POLICY.markup * 100) / 100;
 
 /* Two different aids (one per ear). Not yet confirmed with BHSC — change here once it is:
    "halfPair" = each ear is half its tier's two-aid price; "single" = each ear at its tier's one-aid price. */
@@ -70,7 +92,7 @@ export const EAR_NAMES = ["Right ear", "Left ear"];
 export const mixed = (s) => s.n === 2 && !s.same;
 export const earsInUse = (s) => (mixed(s) ? s.ears : s.ears.slice(0, 1));
 export const earModel = (e) => (e && e.model != null ? MODELS[e.model] : null);
-/* CROS/BiCROS (a CROS on one ear, a hearing aid on the other): the 2026 tier pricing prices it as a
+/* CROS/BiCROS (a CROS on one ear, a hearing aid on the other): the tier pricing prices it as a
    monaural CROS plus a monaural hearing aid. */
 export const crosPair = (s) => mixed(s) && earsInUse(s).some((e) => { const m = earModel(e); return m && isCros(m); });
 const earAmount = (s, m) => (crosPair(s) ? TIERS[m[4]][0] : earPrice(m[4]));
@@ -144,14 +166,12 @@ export function quoteParts(s) {
    Full return: the patient gets back the total paid minus what BHSC keeps: 5% of the hearing aid
    charge, 5% of each service code (92641/92594, V5011, V5020, dispense = the fitting fee) and a
    service fee of $200 (one aid) or $300 (two). One side of a pair: no penalty — the order is
-   simply re-priced as one aid. */
-export const RETURN_KEEP = 0.05;
+   simply re-priced as one aid. The % and fees are in POLICY (returnKeep, serviceFee). */
 /* The fitting, orientation & dispense fee by code (BHSC Hearing Aid Fitting, Orientation and Purchase
-   Agreement): $595 one aid / $845 two = these three + the dispense code ($250 / $500). */
-export const FIT_CODES = [["V5020", "Conformity evaluation", 130], ["V5011", "Fitting, orientation & checking", 160], ["92594", "Electroacoustic evaluation", 55]];
+   Agreement): $595 one aid / $845 two = these three (POLICY.codes) + the dispense code ($250 / $500). */
+export const FIT_CODES = [["V5020", "Conformity evaluation"], ["V5011", "Fitting, orientation & checking"], ["92594", "Electroacoustic evaluation"]];
 const DISPENSE = [[["V5241", "Monaural dispense"], ["V5200", "Contralateral monaural dispense"]], [["V5160", "Binaural dispense"], ["V5240", "Contralateral binaural dispense"]]];
-const DISPENSE_FEE = [250, 500];
-export const SERVICE_FEE = [200, 300];
+export const dispenseFee = (k) => r2(POLICY.fit[k] - POLICY.codes.reduce((a, c) => a + c, 0));
 const r2 = (n) => Math.round(n * 100) / 100;
 
 /** mode: "all" | "one" (same pair) | "right" | "left" (different aid per ear). */
@@ -167,15 +187,16 @@ export function refund(s, mode = "all") {
   if (mode === "all") {
     // 5% of each fitting/dispense code (adds up to 5% of the fitting fee) and 5% of the hearing aids
     const disp = DISPENSE[k][ears.some(isCros) ? 1 : 0];
-    const codes = fitPaid ? [...FIT_CODES, [disp[0], disp[1], DISPENSE_FEE[k]]].map(([code, name, charge]) => ({ code, name, charge, keep: r2(charge * RETURN_KEEP) })) : [];
-    const keepAid = r2(aidPaid * RETURN_KEEP), keepFit = r2(codes.reduce((a, c) => a + c.keep, 0)), fee = SERVICE_FEE[k];
+    const keep = POLICY.returnKeep;
+    const codes = fitPaid ? [...FIT_CODES.map(([code, name], i) => [code, name, POLICY.codes[i]]), [disp[0], disp[1], dispenseFee(k)]].map(([code, name, charge]) => ({ code, name, charge, keep: r2(charge * keep) })) : [];
+    const keepAid = r2(aidPaid * keep), keepFit = r2(codes.reduce((a, c) => a + c.keep, 0)), fee = POLICY.serviceFee[k];
     // The patient gets back everything they paid except what BHSC keeps (matches BHSC's own worksheet).
     rows.push({ label: s.n === 2 ? "Hearing aids paid" : "Hearing aid paid", amount: aidPaid });
     if (fitPaid) rows.push({ label: "Fitting, orientation & dispense paid", amount: fitPaid });
     const extras = [s.incl === "all" && "shipping & handling", s.molds && (s.molds === 2 ? "earmolds" : "earmold"), s.addons.length && (s.addons.length > 1 ? "accessories" : "accessory")].filter(Boolean);
     if (other) rows.push({ label: `${extras.join(", ").replace(/^./, (c) => c.toUpperCase())} paid`, amount: r2(other) });
-    rows.push({ label: "BHSC keeps 5% of the hearing aid charge", amount: -keepAid });
-    if (fitPaid) rows.push({ label: "BHSC keeps 5% of the fitting & dispense charge", amount: -keepFit });
+    rows.push({ label: `BHSC keeps ${pct(keep)} of the hearing aid charge`, amount: -keepAid });
+    if (fitPaid) rows.push({ label: `BHSC keeps ${pct(keep)} of the fitting & dispense charge`, amount: -keepFit });
     rows.push({ label: `Service fee · ${s.n === 2 ? "two aids" : "one aid"} returned`, amount: -fee });
     back = r2(aidPaid + fitPaid + other - keepAid - keepFit - fee);
     math = { codes, keepFit, aidPaid, keepAid, keep5: r2(keepFit + keepAid), fee, kept: r2(keepFit + keepAid + fee), paid: r2(aidPaid + fitPaid + other) };
@@ -186,8 +207,8 @@ export function refund(s, mode = "all") {
     const fitBack = fitPaid ? FEES.fit[1] - FEES.fit[0] : 0;
     rows.push({ label: "Hearing aid returned", sub: `Pair re-priced as one ${kept[1]} (Tier ${kept[4]}, ${money(TIERS[kept[4]][0])})`, amount: aidBack });
     if (fitBack) rows.push({ label: "Fitting & dispense", sub: `Two-aid fee re-priced as one aid`, amount: fitBack });
-    rows.push({ label: "Service fee and 5%", sub: "Not charged — one side of a pair", amount: 0 });
+    rows.push({ label: `Service fee and ${pct(POLICY.returnKeep)}`, sub: "Not charged — one side of a pair", amount: 0 });
     back = r2(aidBack + fitBack);
   }
-  return { rows, refund: Math.max(0, back), other, math, fee: mode === "all" ? SERVICE_FEE[k] : 0 };
+  return { rows, refund: Math.max(0, back), other, math, fee: mode === "all" ? POLICY.serviceFee[k] : 0 };
 }

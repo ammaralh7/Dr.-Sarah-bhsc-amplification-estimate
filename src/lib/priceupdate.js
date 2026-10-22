@@ -1,7 +1,8 @@
 /* "Update prices": reading a pasted manufacturer price list, working out what changed, the admin PIN,
    and saving an updated copy of the app. The list readers follow build/build_data.py, which built the
    app's prices from the same lists, so a pasted list lines up with the models the app already has. */
-import { MODELS, MFRS, BUILT_MFRS, RAW, PRICE_LISTS, SAVED, modelKey, tierFor, famStyle } from "@/lib/pricing";
+import { MODELS, MFRS, BUILT_MFRS, RAW, PRICE_LISTS, COLUMNS, ADDONS, POLICY, SAVED, modelKey, tierFor, famStyle, applyPolicy } from "@/lib/pricing";
+import { readSmart } from "@/lib/smartread";
 import { sha256 } from "@/lib/sha256";
 import { PAGE, DOCTYPE } from "@/lib/snapshot";
 
@@ -103,8 +104,16 @@ export function styleLabel(mfr, model, style, fam) {
 
 const round2 = (n) => Math.round(n * 100) / 100;
 
-/** Compare a pasted list with the app's current prices for one manufacturer. */
-export function readPriceList(mfr, text) {
+/** Compare a pasted list with the app's current prices for one manufacturer. The company's own reader
+    (built for its current list) and the smart reader (any layout) both read it; the one that recognises
+    more of the company's models is used, the company's own on a tie. picked = staff's column choice. */
+export function readPriceList(mfr, text, picked) {
+  const own = readBrand(mfr, text), smart = readSmart(mfr, text, picked);
+  const mine = MODELS.some((m) => m[0] === mfr);
+  return smart.matched > own.matched || (!mine && smart.read) ? smart : own;
+}
+
+function readBrand(mfr, text) {
   if (mfr === "Signia" && /\bFIXED\b/.test(text)) return readSignia(text);
   if (!READERS[mfr]) return readTypedList(mfr, text);
   const { rows, other } = READERS[mfr](text);
@@ -233,7 +242,11 @@ export function makePin(pin) {
 const today = () => new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
 
 /** The app's data after applying the staged changes (also used to update the open page). */
-export function nextData({ changes, pin, brands }) {
+export function nextData({ changes, pin, brands, columns = {} }) {
+  // BHSC prices & fees, when changed: tiers follow the new cost bands (for every model with a known cost)
+  const policy = changes.find((c) => c.type === "policy")?.policy || POLICY;
+  const tierOf = (cost) => policy.bands.reduce((t, lo, i) => (cost >= lo ? i + 1 : t), 1);
+  const rebanded = JSON.stringify(policy.bands) !== JSON.stringify(POLICY.bands);
   const apply = new Map(changes.filter((c) => c.type === "price").map((c) => [c.key, c]));
   const drop = new Set(changes.filter((c) => c.type === "missing" && c.remove).map((c) => c.key));
   const models = [], costs = {}, raw = { ...RAW };
@@ -241,12 +254,12 @@ export function nextData({ changes, pin, brands }) {
     const key = modelKey(m[0], m[1], m[2]);
     if (drop.has(key)) { delete raw[key]; continue; }
     const c = apply.get(key), cost = c ? c.newCost : m[7];
-    models.push([m[0], m[1], m[2], m[3], c ? c.newTier : m[4], c ? 0 : m[5], m[6]]);
+    models.push([m[0], m[1], m[2], m[3], cost != null && (c || rebanded) ? tierOf(cost) : m[4], c ? 0 : m[5], m[6]]);
     if (cost != null) costs[key] = cost;
     if (c?.raw && !raw[key]) raw[key] = c.raw;
   }
   for (const c of changes.filter((x) => x.type === "new" && x.add)) {
-    models.push([c.mfr, c.name, c.style, c.fam, c.newTier, 0, 0]);
+    models.push([c.mfr, c.name, c.style, c.fam, tierOf(c.newCost), 0, 0]);
     costs[c.key] = c.newCost;
     if (c.raw) raw[c.key] = c.raw;
   }
@@ -255,7 +268,9 @@ export function nextData({ changes, pin, brands }) {
   // companies added by hand (not built in) that still have models
   const mfrs = [...new Set([...MFRS.map(([n]) => n), ...models.map((m) => m[0])])].filter((n) => !BUILT_MFRS.includes(n) && models.some((m) => m[0] === n));
   mfrs.forEach((n) => { lists[n] ||= today(); });
-  return { v: 1, updated: today(), lists, models, costs, raw, mfrs, pin: pin || STATE.pin || undefined };
+  // accessories are priced at BHSC cost × the markup: a new markup re-prices them
+  const addons = Object.fromEntries(Object.entries(ADDONS).map(([mf, items]) => [mf, items.map(([n, pr]) => [n, round2(pr / POLICY.markup * policy.markup)])]));
+  return { v: 1, updated: today(), lists, models, costs, raw, mfrs, pricing: policy, addons, columns: { ...COLUMNS, ...columns }, pin: pin || STATE.pin || undefined };
 }
 
 /** A copy of this page (as loaded) with `data` built in, replacing an earlier saved block if there is one. */
@@ -286,5 +301,8 @@ export function useData(data) {
   Object.assign(RAW, data.raw);
   Object.assign(PRICE_LISTS, data.lists);
   (data.mfrs || []).forEach((n) => { if (!MFRS.some(([x]) => x === n)) MFRS.push([n, "var(--label3)"]); });
+  if (data.pricing) applyPolicy(data.pricing);
+  if (data.addons) { Object.keys(ADDONS).forEach((k) => delete ADDONS[k]); Object.assign(ADDONS, data.addons); }
+  Object.assign(COLUMNS, data.columns || {});
   if (data.pin) STATE.pin = data.pin;
 }
