@@ -74,8 +74,8 @@ function readPhonak(text) {
   return { rows, other };
 }
 
-// Lists whose text can't be pasted cleanly (ReSound's is a scanned image, Signia's loses its table) and
-// companies added by hand: the prices are typed in, one "Model  price" per line
+// Lists whose text can't be pasted (ReSound's is a scanned image) and companies added by hand: the
+// prices are typed in, one "Model  price" per line (Signia's can be typed too)
 function readTyped(text) {
   const rows = [], other = [];
   for (const raw of text.split(/\r?\n/)) {
@@ -90,7 +90,7 @@ function readTyped(text) {
 
 const READERS = { Oticon: readOticon, Starkey: readStarkey, Phonak: readPhonak };
 /** Whether a company's list is pasted as is (true) or typed as "Model  price" lines (false). */
-export const pastes = (mfr) => !!READERS[mfr];
+export const pastes = (mfr) => !!READERS[mfr] || mfr === "Signia";
 
 /* How the app shows a style (same as label() in build/build_web.py). */
 export function styleLabel(mfr, model, style, fam) {
@@ -105,6 +105,7 @@ const round2 = (n) => Math.round(n * 100) / 100;
 
 /** Compare a pasted list with the app's current prices for one manufacturer. */
 export function readPriceList(mfr, text) {
+  if (mfr === "Signia" && /\bFIXED\b/.test(text)) return readSignia(text);
   if (!READERS[mfr]) return readTypedList(mfr, text);
   const { rows, other } = READERS[mfr](text);
   const byRaw = new Map(Object.entries(RAW).filter(([k]) => MODELS.some((m) => m[0] === mfr && modelKey(m[0], m[1], m[2]) === k)).map(([k, r]) => [r, k]));
@@ -156,7 +157,66 @@ function readTypedList(mfr, text) {
         changes.push({ type: "price", key, mfr, name: m[1], style: m[2], fam: m[3], older: !!m[5], oldCost: m[7], newCost: round2(r.cost), oldTier: m[4], newTier: tierFor(r.cost) });
     }
   }
-  return { read: rows.length, matched: found.size, total: mine.filter((m) => !m[5]).length, changes, added, missing: [], other };
+  return { read: rows.length, matched: found.size, total: mine.filter((m) => !m[5]).length, changes, added, missing: [], other, typed: true };
+}
+
+/* Signia's list (BlueSky VIP pricing) copies as one line per row, "<products> $<list> FIXED $<Level 1>
+   <warranty>", but the AX/X level labels land elsewhere and the same products line repeats for each level
+   ("Pure 312" under 7AX, 5AX, 3AX, 2AX and 1AX). So the pasted rows are lined up, in order, with the list's
+   rows as the app has them (RAW: "<row #>|<products as printed>"); each row prices every model it covers.
+   The products are compared loosely (spacing, punctuation, a typo or two), and only rows with the FIXED
+   discount count, which leaves the accessory pages out. */
+const lev = (a, b) => {
+  const d = Array.from({ length: b.length + 1 }, (_, j) => j);
+  for (let i = 1; i <= a.length; i++) {
+    let prev = d[0]; d[0] = i;
+    for (let j = 1; j <= b.length; j++) { const t = d[j]; d[j] = Math.min(d[j] + 1, d[j - 1] + 1, prev + (a[i - 1] === b[j - 1] ? 0 : 1)); prev = t; }
+  }
+  return d[b.length];
+};
+// the pasted products text ends with the row's products (anything before it is labels, headers or warranty)
+const endsLike = (pasted, row) => pasted.endsWith(row) || (row.length >= 8 && lev(pasted.slice(-row.length), row) <= 2);
+const clean = (t) => t.replace(/\d+\s*yr(\s*\/\s*\d+\s*yr)*/gi, " ").replace(/\$/g, " ").replace(/\s+/g, " ").trim();
+function readSignia(text) {
+  const flat = text.replace(/\s+/g, " ");
+  const re = /\$\s?([\d,]+(?:\.\d+)?)\s+FIXED\s+(?:\$\s?([\d,]+(?:\.\d+)?)|([\d,]+(?:\.\d+)?)\s*\$?)/g;
+  const pasted = [];
+  let at = 0, m;
+  while ((m = re.exec(flat))) {
+    const before = flat.slice(at, m.index);
+    pasted.push({ text: clean(before), key: norm(before.replace(/\d+\s*yr/gi, "")), cost: toNum(m[2] || m[3]) });
+    at = re.lastIndex;
+  }
+  // the list's rows, in order, and the models each one prices
+  const rows = new Map();
+  MODELS.forEach((x) => {
+    const k = modelKey(x[0], x[1], x[2]), r = x[0] === "Signia" && !x[5] && RAW[k] && RAW[k].match(/^(\d+)\|(.*)$/);
+    if (!r) return;
+    if (!rows.has(+r[1])) rows.set(+r[1], { key: norm(r[2]), models: [] });
+    rows.get(+r[1]).models.push(x);
+  });
+  const order = [...rows.keys()].sort((a, b) => a - b).map((n) => rows.get(n));
+  const found = new Set(), changes = [], added = [];
+  let next = 0;
+  for (const p of pasted) {
+    const i = order.findIndex((r, j) => j >= next && endsLike(p.key, r.key));
+    if (i < 0) {
+      const name = p.text.slice(-80) || "Signia row";
+      added.push({ type: "new", key: modelKey("Signia", name, famStyle("ALL")), mfr: "Signia", name, style: famStyle("ALL"), fam: "ALL", autoStyle: true, newCost: round2(p.cost), newTier: tierFor(p.cost), add: false });
+      continue;
+    }
+    next = i + 1;
+    for (const x of order[i].models) {
+      const key = modelKey(x[0], x[1], x[2]);
+      found.add(key);
+      if (x[7] == null || Math.abs(x[7] - p.cost) >= 0.005)
+        changes.push({ type: "price", key, mfr: "Signia", name: x[1], style: x[2], fam: x[3], oldCost: x[7], newCost: round2(p.cost), oldTier: x[4], newTier: tierFor(p.cost) });
+    }
+  }
+  const listed = order.flatMap((r) => r.models);
+  const missing = listed.filter((x) => !found.has(modelKey(x[0], x[1], x[2])))
+    .map((x) => ({ type: "missing", key: modelKey(x[0], x[1], x[2]), mfr: "Signia", name: x[1], style: x[2], fam: x[3], oldCost: x[7], oldTier: x[4], remove: false }));
+  return { read: pasted.length, matched: found.size, total: listed.length, changes, added, missing, other: [] };
 }
 
 /* ── Admin PIN (scrambled with a salt; starts as 0000 until changed) ── */
