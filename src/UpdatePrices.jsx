@@ -14,13 +14,13 @@ const patient = (t) => `${money(TIERS[t][0])} / ${money(TIERS[t][1])}`;
 const FAM_LABEL = { CUSTOM: "Custom (in the ear)", ALL: "All styles" };
 const HOW = {
   ReSound: "ReSound’s price list is a scanned image, so type the prices instead: one model and its BHSC price per line, e.g. “Sensia 9  1415”. Only the models you type are changed.",
-  Signia: "Signia’s price list doesn’t copy cleanly, so type the prices instead: one model and its BHSC price (“Level 1”) per line, e.g. “Pure Charge&Go 7AX  1090”. Every style of that model gets the new price; only the models you type are changed.",
+  Signia: "Open Signia’s price list (PDF), press Ctrl+A then Ctrl+C, click in the box and press Ctrl+V. The Level 1 price is used; the accessory pages are skipped. You can also type one model and its price per line, e.g. “Pure Charge&Go 7AX  1090”.",
   Phonak: "Open the BHSC pricing spreadsheet from Phonak, select the Product, List Price and Net Price columns, copy (Ctrl+C) and paste here (Ctrl+V).",
   Oticon: "Open Oticon’s price list (PDF), press Ctrl+A then Ctrl+C, click in the box and press Ctrl+V. The Net Price is used.",
   Starkey: "Open Starkey’s account price report (PDF), press Ctrl+A then Ctrl+C, click in the box and press Ctrl+V. The account price is used.",
 };
 const howTo = (mfr) => HOW[mfr] || `Type the ${mfr} prices: one model and its BHSC price per line, e.g. “Model name  1200”. Every style of that model gets the new price; a name the app doesn’t have is added as a new model.`;
-const EXAMPLE = { ReSound: "Sensia 9  1415\nVivia 7  930", Signia: "Pure Charge&Go 7AX  1090\nStyletto 5AX  775" };
+const EXAMPLE = { ReSound: "Sensia 9  1415\nVivia 7  930" };
 const NEW = "+new";
 const input = "h-10 w-full rounded-[10px] bg-fill px-3 text-[15px] text-label outline-none placeholder:text-label3 focus:ring-2 focus:ring-tint";
 const card = "rounded-[12px] bg-card";
@@ -188,7 +188,7 @@ function Paste({ onBack, onUse }) {
   const [mfr, setMfr] = useState("Oticon");
   const [text, setText] = useState("");
   const r = useMemo(() => (text.trim() ? readPriceList(mfr, text) : null), [mfr, text]);
-  const typed = !pastes(mfr);
+  const typed = r ? !!r.typed : !pastes(mfr);
   const tierMoves = r ? r.changes.filter((c) => c.newTier !== c.oldTier).length : 0;
   const missing = r && !typed ? r.missing : [];
   const found = r && (r.changes.length || r.added.length || missing.length);
