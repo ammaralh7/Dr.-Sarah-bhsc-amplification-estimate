@@ -17,7 +17,7 @@ const byName = (list) => {
 
 export default function HAPrices({ menu = null }) {
   const [q, setQ] = useState("");
-  const [mfr, setMfr] = useState(MFRS[0][0]);
+  const [mfr, setMfr] = useState(MFRS[0]?.[0] || "");
   const [style, setStyle] = useState("all");
   const words = q.trim().toLowerCase().split(/\s+/).filter(Boolean);
   const searching = words.length > 0;

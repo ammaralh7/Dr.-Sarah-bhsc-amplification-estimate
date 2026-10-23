@@ -10,7 +10,7 @@
      matched in the list's own order. A bare model name prices all its styles when they share one price.
    - Which number is BHSC's price: the column ("last amount", "2nd from the left"…) that agrees with
      the prices the app already has; else the one saved for this company; else staff pick it once. */
-import { MODELS, RAW, COLUMNS, BUILT_MFRS, modelKey, famStyle, tierFor } from "@/lib/pricing";
+import { MODELS, RAW, COLUMNS, BUILT_MFRS, ADDONS, POLICY, modelKey, famStyle, tierFor } from "@/lib/pricing";
 
 const AMOUNT = /\$\s?\d[\d,]*(?:\.\d{1,2})?|\b\d{1,3}(?:,\d{3})+(?:\.\d{1,2})?\b|\b\d+\.\d{2}\b/g;
 const toNum = (s) => parseFloat(String(s).replace(/[$,\s]/g, ""));
@@ -29,7 +29,7 @@ const clean = (t) => t
   .replace(/\s+/g, " ").replace(/^[\s,;:|·-]+|[\s,;:|·-]+$/g, "");
 
 // Lines that carry a number but aren't products (account numbers, dates, page totals…)
-const NOT_PRODUCT = /\b(account|number|date|created|page|phone|fax|total|subtotal|invoice #|order #|zip)\b/i;
+const NOT_PRODUCT = /\b(account|number|date|created|page|total|subtotal|invoice #|order #|zip)\b/i;
 
 function lev(a, b) {
   const d = Array.from({ length: b.length + 1 }, (_, j) => j);
@@ -156,6 +156,45 @@ function headerRule(text) {
   return null;
 }
 
+/* Accessories sold alongside the hearing aids. A line is one when its own words say so (charger, remote,
+   TV, mic, Roger, adapter…), or when it isn't a known hearing aid and sits under an accessory heading.
+   A CROS is always a hearing device, even under "Accessory Price Entries". */
+const ACC_WORDS = new Set(["charger", "chargers", "charging", "dock", "remote", "remotes", "streamer", "streamline", "tv", "mic", "microphone",
+  "roger", "adapter", "adaptor", "connector", "connectclip", "clip", "dryer", "dehumidifier", "cleaning", "cleaner", "clean", "wax", "filter",
+  "filters", "dome", "domes", "battery", "batteries", "case", "cable", "cord", "neckloop", "loop", "telecoil", "pocket", "minipocket",
+  "easypocket", "easytek", "autophone", "phone", "transmitter", "noahlink", "connexx", "connexxair", "programming", "kit", "lanyard",
+  "holder", "sleeve", "accessory", "accessories", "earmold", "earmolds", "mold", "molds", "app"]);
+const ACC_HEADING = /accessor|charger|streamer|remote|supplies|parts|misc/i;
+const isCrosRow = (r) => r.w.set.has("cros") || r.w.set.has("bicros");
+const accByWords = (r) => !isCrosRow(r) && r.w.list.some((t) => ACC_WORDS.has(t));
+const accByHeading = (r) => !isCrosRow(r) && ACC_HEADING.test(r.section);
+
+/* Accessory lines against the company's accessory list (patient price = BHSC cost × the markup):
+   new prices for ones the app has, and new ones (left unticked). */
+function readAccessoryRows(mfr, rows, rule) {
+  const have = (ADDONS[mfr] || []).map(([name, price]) => ({ name, price, w: tokens(name) }));
+  const changes = [], added = [], seen = new Set();
+  for (const r of rows) {
+    const cost = rule ? pickAmt(r.amts, rule) : null;
+    if (cost == null || cost < 1 || cost > 10000) continue;
+    const price = round2(cost * POLICY.markup);
+    const fits = have.filter((a) => a.w.length && a.w.every((t) => r.w.set.has(t))), top = Math.max(0, ...fits.map((a) => a.w.length));
+    const best = fits.filter((a) => a.w.length === top);
+    if (best.length === 1) {
+      const a = best[0];
+      if (seen.has(a.name)) continue;
+      seen.add(a.name);
+      if (Math.abs(a.price - price) >= 0.005) changes.push({ type: "acc", key: `acc|${mfr}|${a.name}`, mfr, name: a.name, oldPrice: a.price, newPrice: price, cost: round2(cost) });
+      continue;
+    }
+    if (best.length > 1 || !/[a-z]{2}/i.test(r.own)) continue;
+    const name = r.own.slice(0, 60), key = `acc|${mfr}|${name}`;
+    if (added.some((a) => a.key === key)) continue;
+    added.push({ type: "accNew", key, mfr, name, cost: round2(cost), newPrice: price, add: false });
+  }
+  return { changes, added, matched: seen.size, total: have.length };
+}
+
 const pickAmt = (amts, rule) => (rule.from === "R" ? amts[amts.length - 1 - rule.i] : amts[rule.i]);
 export const ruleName = (r) => (r.from === "R" ? (r.i === 0 ? "the last price on each line" : `price ${r.i + 1} from the right`) : r.i === 0 ? "the first price on each line" : `price ${r.i + 1} from the left`);
 
@@ -177,7 +216,12 @@ export function guessType(text) {
  * Returns the usual result plus { smart: true, rule, needsColumn, sample, unclear }.
  */
 export function readSmart(mfr, text, picked) {
-  const rows = rowsOf(text), units = unitsFor(mfr), matches = matchRows(rows, units);
+  const rows = rowsOf(text), units = unitsFor(mfr);
+  // a line whose own words make it an accessory is not a hearing aid, unless it is a hearing aid's own
+  // line on the list (Signia's "Active Pro (1HA + Charger)")
+  const raw = matchRows(rows, units);
+  const strongAcc = rows.map((r, i) => accByWords(r) && !(raw[i] && raw[i].unit && raw[i].unit.list));
+  const matches = raw.map((m, i) => (strongAcc[i] ? null : m));
   const mine = MODELS.filter((m) => m[0] === mfr);
   // which amount is BHSC's price
   let rule = null, auto = false;
@@ -219,7 +263,9 @@ export function readSmart(mfr, text, picked) {
 
   const found = new Set(), changes = [], added = [];
   let unclear = 0;
+  const accRows = [];
   rows.forEach((r, idx) => {
+    if (strongAcc[idx]) { accRows.push(r); return; }
     if (matches[idx] === "dup") return;
     if (matches[idx] === "unclear") { unclear++; return; }
     const u = matches[idx] && matches[idx].unit;
@@ -235,6 +281,8 @@ export function readSmart(mfr, text, picked) {
       }
       return;
     }
+    // under an accessory heading, or (on a known company's list) cheaper than any hearing aid tier: an accessory or part
+    if (accByHeading(r) || (mine.length && cost != null && cost < POLICY.bands[0])) { accRows.push(r); return; }
     if (cost == null || cost < 50 || cost > 25000 || !/[a-z]{2}/i.test(r.own)) return;
     const name = r.own.slice(0, 80), fam = guessType(`${r.own} ${r.section}`), style = famStyle(fam), key = modelKey(mfr, name, style);
     if (added.some((a) => a.key === key) || mine.some((m) => keyOf(m) === key)) return;
@@ -247,5 +295,5 @@ export function readSmart(mfr, text, picked) {
   const partial = found.size < current.length / 2;
   const missing = partial ? [] : current.filter((m) => !found.has(keyOf(m)))
     .map((m) => ({ type: "missing", key: keyOf(m), mfr, name: m[1], style: m[2], fam: m[3], oldCost: m[7], oldTier: m[4], remove: false }));
-  return { ...result, matched: found.size, total: current.length, changes, added, missing, other: [], unclear, typed: partial };
+  return { ...result, matched: found.size, total: current.length, changes, added, missing, other: [], unclear, typed: partial, accessories: readAccessoryRows(mfr, accRows, rule) };
 }

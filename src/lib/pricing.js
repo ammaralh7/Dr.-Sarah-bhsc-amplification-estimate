@@ -59,8 +59,10 @@ export const PRICE_LISTS = { ...(SAVED?.lists || data.lists || {}) };
 export const COLUMNS = { ...(SAVED?.columns || {}) };
 export const BUILT_MFRS = ["ReSound", "Phonak", "Oticon", "Starkey", "Signia"];
 // Companies added with "Update prices" come after the built-in ones, with a plain grey dot
-export const MFRS = [...BUILT_MFRS.map((n) => [n, `var(--${n.toLowerCase()})`]),
-  ...(SAVED?.mfrs || []).filter((n) => !BUILT_MFRS.includes(n)).map((n) => [n, "var(--label3)"])];
+// A company shows only while it has models (removing all of a company's models in Update prices removes it).
+export const companies = (models, saved = []) => [...BUILT_MFRS.map((n) => [n, `var(--${n.toLowerCase()})`]),
+  ...saved.filter((n) => !BUILT_MFRS.includes(n)).map((n) => [n, "var(--label3)"])].filter(([n]) => models.some((m) => m[0] === n));
+export const MFRS = companies(MODELS, SAVED?.mfrs || []);
 export const STYLES = [["RIC", "Receiver in canal"], ["BTE", "Behind the ear"], ["ITE", "In the ear"], ["ITC", "In the canal"], ["CIC", "Completely in canal"], ["IIC", "Invisible in canal"]];
 const CODES = { CIC: ["V5254","V5258"], IIC: ["V5254","V5258"], ITC: ["V5255","V5259"], ITE: ["V5256","V5260"], BTE: ["V5257","V5261"], RIC: ["V5257","V5261"] };
 
