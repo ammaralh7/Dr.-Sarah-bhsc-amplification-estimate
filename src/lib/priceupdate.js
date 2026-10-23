@@ -1,7 +1,7 @@
 /* "Update prices": reading a pasted manufacturer price list, working out what changed, the admin PIN,
    and saving an updated copy of the app. The list readers follow build/build_data.py, which built the
    app's prices from the same lists, so a pasted list lines up with the models the app already has. */
-import { MODELS, MFRS, BUILT_MFRS, RAW, PRICE_LISTS, COLUMNS, ADDONS, POLICY, SAVED, modelKey, tierFor, famStyle, applyPolicy } from "@/lib/pricing";
+import { MODELS, MFRS, BUILT_MFRS, RAW, PRICE_LISTS, COLUMNS, ADDONS, POLICY, SAVED, modelKey, tierFor, famStyle, applyPolicy, companies } from "@/lib/pricing";
 import { readSmart } from "@/lib/smartread";
 import { sha256 } from "@/lib/sha256";
 import { PAGE, DOCTYPE } from "@/lib/snapshot";
@@ -110,7 +110,8 @@ const round2 = (n) => Math.round(n * 100) / 100;
 export function readPriceList(mfr, text, picked) {
   const own = readBrand(mfr, text), smart = readSmart(mfr, text, picked);
   const mine = MODELS.some((m) => m[0] === mfr);
-  return smart.matched > own.matched || (!mine && smart.read) ? smart : own;
+  // accessories always come from the smart reader (the companies' own readers skip them)
+  return { ...(smart.matched > own.matched || (!mine && smart.read) ? smart : own), accessories: smart.accessories };
 }
 
 function readBrand(mfr, text) {
@@ -248,7 +249,9 @@ export function nextData({ changes, pin, brands, columns = {} }) {
   const tierOf = (cost) => policy.bands.reduce((t, lo, i) => (cost >= lo ? i + 1 : t), 1);
   const rebanded = JSON.stringify(policy.bands) !== JSON.stringify(POLICY.bands);
   const apply = new Map(changes.filter((c) => c.type === "price").map((c) => [c.key, c]));
-  const drop = new Set(changes.filter((c) => c.type === "missing" && c.remove).map((c) => c.key));
+  // removed: a model missing from a new list set to Remove, or a model / company removed in Add or edit
+  const drop = new Set(changes.filter((c) => (c.type === "missing" && c.remove) || c.type === "remove").map((c) => c.key));
+  const goneCos = new Set(changes.filter((c) => c.type === "remove" && c.company).map((c) => c.company));
   const models = [], costs = {}, raw = { ...RAW };
   for (const m of MODELS) {
     const key = modelKey(m[0], m[1], m[2]);
@@ -258,7 +261,7 @@ export function nextData({ changes, pin, brands, columns = {} }) {
     if (cost != null) costs[key] = cost;
     if (c?.raw && !raw[key]) raw[key] = c.raw;
   }
-  for (const c of changes.filter((x) => x.type === "new" && x.add)) {
+  for (const c of changes.filter((x) => x.type === "new" && x.add && !goneCos.has(x.mfr))) {
     models.push([c.mfr, c.name, c.style, c.fam, tierOf(c.newCost), 0, 0]);
     costs[c.key] = c.newCost;
     if (c.raw) raw[c.key] = c.raw;
@@ -268,8 +271,13 @@ export function nextData({ changes, pin, brands, columns = {} }) {
   // companies added by hand (not built in) that still have models
   const mfrs = [...new Set([...MFRS.map(([n]) => n), ...models.map((m) => m[0])])].filter((n) => !BUILT_MFRS.includes(n) && models.some((m) => m[0] === n));
   mfrs.forEach((n) => { lists[n] ||= today(); });
-  // accessories are priced at BHSC cost × the markup: a new markup re-prices them
-  const addons = Object.fromEntries(Object.entries(ADDONS).map(([mf, items]) => [mf, items.map(([n, pr]) => [n, round2(pr / POLICY.markup * policy.markup)])]));
+  // accessories: new prices and new ones from a pasted list; priced at BHSC cost × the markup, so a new
+  // markup re-prices them all
+  const acc = JSON.parse(JSON.stringify(ADDONS));
+  changes.filter((c) => c.type === "acc").forEach((c) => { const a = (acc[c.mfr] || []).find(([n]) => n === c.name); if (a) a[1] = c.newPrice; });
+  changes.filter((c) => c.type === "accNew" && c.add && !goneCos.has(c.mfr)).forEach((c) => { (acc[c.mfr] ||= []).push([c.name, c.newPrice]); });
+  goneCos.forEach((co) => { delete acc[co]; });
+  const addons = Object.fromEntries(Object.entries(acc).map(([mf, items]) => [mf, items.map(([n, pr]) => [n, round2(pr / POLICY.markup * policy.markup)])]));
   return { v: 1, updated: today(), lists, models, costs, raw, mfrs, pricing: policy, addons, columns: { ...COLUMNS, ...columns }, pin: pin || STATE.pin || undefined };
 }
 
@@ -300,7 +308,7 @@ export function useData(data) {
   Object.keys(RAW).forEach((k) => delete RAW[k]);
   Object.assign(RAW, data.raw);
   Object.assign(PRICE_LISTS, data.lists);
-  (data.mfrs || []).forEach((n) => { if (!MFRS.some(([x]) => x === n)) MFRS.push([n, "var(--label3)"]); });
+  MFRS.splice(0, MFRS.length, ...companies(MODELS, data.mfrs || []));
   if (data.pricing) applyPolicy(data.pricing);
   if (data.addons) { Object.keys(ADDONS).forEach((k) => delete ADDONS[k]); Object.assign(ADDONS, data.addons); }
   Object.assign(COLUMNS, data.columns || {});

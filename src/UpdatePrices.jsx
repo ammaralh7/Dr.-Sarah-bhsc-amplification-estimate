@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { ArrowLeft, ArrowRight, Check, ClipboardPaste, Download, KeyRound, Lock, Plus, SlidersHorizontal, TriangleAlert } from "lucide-react";
-import { NavBar, ThemeButton, SearchField, Pills, Capsule } from "@/components/ios";
+import { ArrowLeft, ArrowRight, Check, ClipboardPaste, Download, KeyRound, Lock, Plus, SlidersHorizontal, Trash2, TriangleAlert } from "lucide-react";
+import { NavBar, ThemeButton, SearchField, Pills, Capsule, Confirm } from "@/components/ios";
 import { MODELS, MFRS, PRICE_LISTS, TIERS, FAMILIES, HAS_COSTS, POLICY, famStyle, modelKey, money, tierFor, pct } from "@/lib/pricing";
 import { readPriceList, pastes, styleLabel, checkPin, makePin, nextData, savedPage, downloadPage, useData } from "@/lib/priceupdate";
 import { ruleName } from "@/lib/smartread";
@@ -27,7 +27,8 @@ const NEW = "+new";
 const input = "h-10 w-full rounded-[10px] bg-fill px-3 text-[15px] text-label outline-none placeholder:text-label3 focus:ring-2 focus:ring-tint";
 const card = "rounded-[12px] bg-card";
 // what saving would change (a model missing from a new list only counts once it is set to Remove)
-const counts = (c) => c.type === "price" || c.type === "policy" || (c.type === "new" && c.add) || (c.type === "missing" && c.remove);
+const counts = (c) => ["price", "policy", "remove", "acc"].includes(c.type) || ((c.type === "new" || c.type === "accNew") && c.add) || (c.type === "missing" && c.remove);
+const removing = (c) => c.type === "remove" || (c.type === "missing" && c.remove);
 
 export default function UpdatePrices({ menu = null, onSaved }) {
   const [open, setOpen] = useState(false);
@@ -94,7 +95,7 @@ export default function UpdatePrices({ menu = null, onSaved }) {
             ) : step === "pricing" ? (
               <PricingEditor start={policy || POLICY} onBack={() => go("choose")} onUse={(p) => { stage([{ type: "policy", key: "policy", policy: p }]); go("review"); }} />
             ) : step === "edit" ? (
-              <Edit count={staged.filter(counts).length} onBack={() => go("choose")} onStage={(items) => stage(items)} onReview={() => go("review")} />
+              <Edit count={staged.filter(counts).length} staged={staged} onBack={() => go("choose")} onStage={(items) => stage(items)} onReview={() => go("review")} />
             ) : step === "pin" ? (
               <ChangePin onBack={() => go("choose")} onSet={(p) => { setPin(p); go("review"); }} />
             ) : (
@@ -175,8 +176,8 @@ function Choose({ pending, go }) {
         </section>
         <section className={cn(card, "grid content-start gap-3 p-6")}>
           <span className="grid h-11 w-11 place-items-center rounded-[12px] bg-tint-soft text-tint"><Plus className="h-5 w-5" strokeWidth={2.4} /></span>
-          <h2 className="text-[20px] font-semibold">Add or edit a model</h2>
-          <p className="text-[15px] leading-relaxed text-label2">A new hearing aid came out, or one price changed. Search for it and type the new BHSC price — the tier and patient prices are worked out automatically.</p>
+          <h2 className="text-[20px] font-semibold">Add, edit or remove</h2>
+          <p className="text-[15px] leading-relaxed text-label2">A new hearing aid came out, one price changed, or a model or a whole company should go. Search for it and type the new BHSC price — the tier and patient prices are worked out automatically.</p>
           <Capsule variant="tinted" className="mt-1 justify-self-start" onClick={() => go("edit")}>Add or edit</Capsule>
         </section>
         <section className={cn(card, "grid content-start gap-3 p-6")}>
@@ -220,7 +221,8 @@ function Paste({ onBack, onUse }) {
   const missing = r && !typed ? r.missing : [];
   // lines the app didn't recognise on a known company's list (often accessories) aren't counted as new models
   const fresh = r ? r.added.filter((a) => !a.quiet).length : 0, extra = r ? r.added.length - fresh : 0;
-  const found = r && (r.changes.length || fresh || missing.length);
+  const acc = r?.accessories || { changes: [], added: [] };
+  const found = r && (r.changes.length || fresh || missing.length || acc.changes.length || acc.added.length);
   const lowMatch = r && !typed && r.read > 0 && r.matched < r.total / 2;
   const line = (ok, n, children, warn) => (
     <li className="flex items-start gap-2.5">
@@ -283,6 +285,9 @@ function Paste({ onBack, onUse }) {
               </ul>
               {!HAS_COSTS && r.changes.length > 0 && <p className="text-[13px] leading-snug text-label2">This copy has no BHSC prices built in, so every price on the list counts as new. The tier on the next screen shows whether the patient price changes.</p>}
               {lowMatch && <p className="text-[13px] leading-snug text-warn-ink">Most models weren’t found. Is this the full {mfr} list, copied with Ctrl+A?</p>}
+              {(acc.changes.length > 0 || acc.added.length > 0) && (
+                <p className="text-[13px] leading-snug text-label2">Accessories: <b className="text-label">{acc.changes.length}</b> new {acc.changes.length === 1 ? "price" : "prices"}{acc.added.length > 0 && <>, <b className="text-label">{acc.added.length}</b> not in the app yet (tick any to add them on the next screen)</>}. Patient price = BHSC cost × {POLICY.markup}.</p>
+              )}
               {extra > 0 && <p className="text-[13px] leading-snug text-label2">{extra} other {extra === 1 ? "line" : "lines"} on the list {extra === 1 ? "isn’t" : "aren’t"} in the app (often accessories). You can tick any that are new hearing aids on the next screen.</p>}
               {r.unclear > 0 && <p className="text-[13px] leading-snug text-label2">{r.unclear} {r.unclear === 1 ? "line fits" : "lines fit"} two models equally, so {r.unclear === 1 ? "it was" : "they were"} left alone — change those by hand if needed.</p>}
               {r.smart && r.rule && !ask && (
@@ -295,8 +300,9 @@ function Paste({ onBack, onUse }) {
             </>
           )}
           <p className="text-[13px] leading-snug text-label2">Only the BHSC price is used. Nothing changes until you review and save.</p>
-          <Capsule className="justify-self-start" disabled={!found || ask} onClick={() => onUse([...r.changes, ...r.added, ...missing], mfr, r.smart && !r.auto ? r.rule : null)}>
-            {ask ? "Pick BHSC’s price first" : r && r.read && !found ? "No changes found" : "Review changes"}<ArrowRight className="h-4 w-4" strokeWidth={2.4} />
+          <Capsule className="justify-self-start" disabled={!found || ask} onClick={() => onUse([...r.changes, ...r.added, ...missing, ...acc.changes, ...acc.added], mfr, r.smart && !r.auto ? r.rule : null)}>
+            {ask ? "Pick BHSC’s price first" : r && r.read && !found ? "No changes found"
+              : r && !r.changes.length && !fresh && !missing.length && !acc.changes.length ? "No price changes — see accessories" : "Review changes"}<ArrowRight className="h-4 w-4" strokeWidth={2.4} />
           </Capsule>
         </aside>
       </div>
@@ -307,8 +313,10 @@ function Paste({ onBack, onUse }) {
 /* ── Step 2b: change one model's price, or add a model by hand ── */
 const price = (v) => { const n = parseFloat(String(v).replace(/[$,\s]/g, "")); return Number.isFinite(n) && n > 0 ? Math.round(n * 100) / 100 : null; };
 
-function Edit({ count, onBack, onStage, onReview }) {
+function Edit({ count, staged, onBack, onStage, onReview }) {
   const [q, setQ] = useState("");
+  const [ask, setAsk] = useState(null);          // the removal waiting for "Are you sure?"
+  const [co, setCo] = useState("");
   const [pick, setPick] = useState(null);
   const [cost, setCost] = useState("");
   const [nm, setNm] = useState({ mfr: "Oticon", company: "", name: "", style: "", fam: "RIC", cost: "" });
@@ -333,6 +341,11 @@ function Edit({ count, onBack, onStage, onReview }) {
     flash(`${m[1]} · ${m[2]}: new price added to the changes.`);
     setPick(null); setCost(""); setQ("");
   };
+  const gone = new Set(staged.filter(removing).map((x) => x.key));
+  const removal = (m, company) => ({ type: "remove", key: modelKey(m[0], m[1], m[2]), mfr: m[0], name: m[1], style: m[2], fam: m[3], oldCost: m[7], oldTier: m[4], company });
+  const coModels = co ? MODELS.filter((m) => m[0] === co) : [];
+  const removeModel = (m) => { onStage([removal(m)]); flash(`${m[1]} · ${m[2]} will be removed when you save.`); setPick(null); setQ(""); setAsk(null); };
+  const removeCompany = () => { onStage(coModels.map((m) => removal(m, co))); flash(`${co} and its ${coModels.length} models will be removed when you save.`); setCo(""); setAsk(null); };
   const addModel = () => {
     onStage([{ type: "new", key: nkey, mfr: nmfr, name: nm.name.trim(), style: nstyle, fam: nm.fam, autoStyle: !nm.style.trim(), newCost: nc, newTier: tierFor(nc), add: true }]);
     flash(`${nm.name.trim()} added to the changes.`);
@@ -361,7 +374,7 @@ function Edit({ count, onBack, onStage, onReview }) {
                 <li key={modelKey(m[0], m[1], m[2])}>
                   <button type="button" onClick={() => { setPick(m); setCost(""); setTimeout(() => costRef.current?.focus(), 0); }}
                     className="press flex w-full items-baseline gap-3 rounded-[8px] px-2 py-1.5 text-left text-[14px] hover:bg-fill">
-                    <span className="min-w-0 flex-1 truncate"><b className="text-[15px]">{m[1]}</b> <span className="text-label2">· {m[2]} · {m[0]}{m[5] ? " · older list" : ""}</span></span>
+                    <span className="min-w-0 flex-1 truncate"><b className="text-[15px]">{m[1]}</b> <span className="text-label2">· {m[2]} · {m[0]}{m[5] ? " · older list" : ""}</span>{gone.has(modelKey(m[0], m[1], m[2])) && <span className="ml-1.5 rounded-full bg-warn px-1.5 py-0.5 text-[11px] font-semibold text-warn-ink">to be removed</span>}</span>
                     <span className="shrink-0 text-[13px] text-label2">Tier {m[4]}</span>
                     <span className="tnum w-[5.5rem] shrink-0 text-right font-semibold">{usd(m[7])}</span>
                   </button>
@@ -380,6 +393,7 @@ function Edit({ count, onBack, onStage, onReview }) {
               <div className="flex gap-2">
                 <Capsule className="h-10 px-4 text-[15px]" disabled={!c} onClick={setPrice}>Use this price</Capsule>
                 <Capsule variant="plain" className="h-10 px-3 text-[15px]" onClick={() => setPick(null)}>Cancel</Capsule>
+                <Capsule variant="plain" className="ml-auto h-10 px-3 text-[15px] text-bad" onClick={() => setAsk({ model: pick })}><Trash2 className="h-4 w-4" strokeWidth={2.2} />Remove this model</Capsule>
               </div>
             </div>
           )}
@@ -414,6 +428,28 @@ function Edit({ count, onBack, onStage, onReview }) {
           <p className="text-[12px] leading-snug text-label3">“Type” decides where it shows when choosing a hearing aid and which billing code the contract uses.</p>
         </section>
       </div>
+
+      <section aria-label="Remove a company" className={cn(card, "flex flex-wrap items-center gap-x-5 gap-y-3 p-5")}>
+        <div className="min-w-0 basis-64">
+          <h2 className="text-[18px] font-semibold">Remove a company</h2>
+          <p className="text-[13px] leading-snug text-label2">BHSC stops carrying a manufacturer: it and all its models come out of the app.</p>
+        </div>
+        <Pills aria="Company to remove" value={co} onChange={setCo} options={MFRS.map(([n]) => ({ value: n, label: n }))} />
+        <Capsule variant="tinted" className="ml-auto h-10 px-4 text-[15px] text-bad" disabled={!co} onClick={() => setAsk({ company: co })}>
+          <Trash2 className="h-4 w-4" strokeWidth={2.2} />{co ? `Remove ${co}` : "Remove…"}
+        </Capsule>
+      </section>
+
+      <Confirm open={!!ask?.model} danger confirmLabel="Remove model" onCancel={() => setAsk(null)} onConfirm={() => removeModel(ask.model)}
+        title={ask?.model ? `Remove ${ask.model[0]} ${ask.model[1]} · ${ask.model[2]}?` : ""}>
+        <p>It won’t show in estimates, comparisons or the price list once the updated app is saved and installed.</p>
+        <p>You can still undo it on the review screen before saving.</p>
+      </Confirm>
+      <Confirm open={!!ask?.company} danger confirmLabel={`Remove ${ask?.company || ""}`} onCancel={() => setAsk(null)} onConfirm={removeCompany}
+        title={ask?.company ? `Remove ${ask.company} and all ${coModels.length} of its models?` : ""}>
+        <p>{ask?.company} and every {ask?.company} hearing aid come out of the app: estimates, comparisons, the price list and Update prices.</p>
+        <p>You can still undo it on the review screen before saving. To bring it back later, add its models again (or paste its list under “+ New company”).</p>
+      </Confirm>
     </>
   );
 }
@@ -442,6 +478,8 @@ function policyDiff(a, b) {
 
 function Review({ staged, setStaged, pin, onDropPin, onMore, onSave }) {
   const [showQuiet, setShowQuiet] = useState(false);
+  const [sure, setSure] = useState(false);
+  const [styling, setStyling] = useState(null);    // the new model whose style buttons are open         // "Save and remove …?" before a save that removes anything
   const drop = (key) => setStaged((p) => p.filter((c) => c.key !== key));
   const patch = (key, v) => setStaged((p) => p.map((c) => (c.key === key ? { ...c, ...v } : c)));
   // a new model's style follows its type unless one was typed in
@@ -453,8 +491,16 @@ function Review({ staged, setStaged, pin, onDropPin, onMore, onSave }) {
   const retiered = pol && HAS_COSTS && JSON.stringify(pol.policy.bands) !== JSON.stringify(POLICY.bands)
     ? MODELS.filter((m) => m[7] != null && !m[5] && pol.policy.bands.reduce((t, lo, i) => (m[7] >= lo ? i + 1 : t), 1) !== m[4]).length : 0;
   const tickAll = (list, on) => setStaged((p) => p.map((c) => (list.includes(c) ? { ...c, add: on } : c)));
+  const accChanges = staged.filter((c) => c.type === "acc"), accNew = staged.filter((c) => c.type === "accNew");
   const tierMoves = prices.filter((c) => c.newTier !== c.oldTier).length;
-  const removed = missing.filter((c) => c.remove).length;
+  const removes = staged.filter((c) => c.type === "remove");
+  const removed = missing.filter((c) => c.remove).length + removes.length;
+  // a removed company is one row; single models are a row each
+  const goneCos = [...new Set(removes.filter((c) => c.company).map((c) => c.company))];
+  const goneModels = removes.filter((c) => !c.company);
+  const dropAll = (keys) => setStaged((p) => p.filter((c) => !keys.includes(c.key)));
+  const removing = staged.filter((c) => c.type === "remove" || (c.type === "missing" && c.remove));
+  const save = () => (removing.length ? setSure(true) : onSave());
   const chip = (n, label, cls) => <span className={cn("inline-flex h-9 items-center gap-1 rounded-full bg-card px-3.5 text-[15px] shadow-[0_0_0_1px_var(--sep)]", cls)}><b className="tnum">{n}</b>{label}</span>;
   const head = "whitespace-nowrap px-4 pb-2 pt-3 text-[12px] font-semibold uppercase tracking-[0.03em] text-label2";
   const cell = "border-t border-sep px-4 py-2.5 align-middle";
@@ -469,6 +515,7 @@ function Review({ staged, setStaged, pin, onDropPin, onMore, onSave }) {
         {chip(added.filter((c) => c.add).length, added.filter((c) => c.add).length === 1 ? " new model" : " new models", "text-tint")}
         {chip(removed, " removed")}
         {pol && chip(diffs.length, diffs.length === 1 ? " price or fee change" : " price & fee changes", "text-tint")}
+        {(accChanges.length > 0 || accNew.some((c) => c.add)) && chip(accChanges.length + accNew.filter((c) => c.add).length, " accessory changes")}
       </div>
 
       {empty ? <p className={cn(card, "px-4 py-8 text-center text-[15px] text-label2")}>No changes yet. Paste a price list or edit a model first.</p> : (
@@ -515,9 +562,14 @@ function Review({ staged, setStaged, pin, onDropPin, onMore, onSave }) {
                 <tr key={c.key} className={cn(!c.add && "opacity-50")}>
                   <td className={cell}><b className="text-[15px]">{c.name}</b> <span className="text-[14px] text-label2">· {c.style}</span>
                     <div className="mt-1 flex flex-wrap items-center gap-1 text-[12px] text-label3">
-                      {MFRS.some(([n]) => n === c.mfr) ? c.mfr : <b className="text-tint">New company: {c.mfr}</b>} · Type
-                      <Pills aria={`Type for ${c.name}`} value={c.fam} onChange={(v) => setType(c, v)}
-                        options={FAMILIES.map((f) => ({ value: f, label: FAM_LABEL[f] || f }))} className="[&_button]:h-6 [&_button]:px-1.5 [&_button]:text-[12px]" />
+                      {MFRS.some(([n]) => n === c.mfr) ? c.mfr : <b className="text-tint">New company: {c.mfr}</b>} ·
+                      {styling === c.key ? (
+                        <Pills aria={`Type for ${c.name}`} value={c.fam} onChange={(v) => { setType(c, v); setStyling(null); }}
+                          options={FAMILIES.map((f) => ({ value: f, label: FAM_LABEL[f] || f }))} className="[&_button]:h-6 [&_button]:px-1.5 [&_button]:text-[12px]" />
+                      ) : (
+                        <>Style <b className="text-label2">{c.fam === "ALL" ? "all styles (shows under every style)" : FAM_LABEL[c.fam] || c.fam}</b>
+                          <button type="button" aria-label={`Change style of ${c.name}`} onClick={() => setStyling(c.key)} className="font-semibold text-tint">Change</button></>
+                      )}
                     </div>
                   </td>
                   <td className={cn(cell, "tnum")}><b className="text-[15px]">{usd(c.newCost)}</b></td>
@@ -543,6 +595,51 @@ function Review({ staged, setStaged, pin, onDropPin, onMore, onSave }) {
                   </td>
                 </tr>
               ))}
+              {(accChanges.length > 0 || accNew.length > 0) && (
+                <tr><td colSpan={4} className={cn(head, "border-t border-sep pt-4")}>Accessories <span className="normal-case tracking-normal text-label3">— patient price = BHSC cost × {POLICY.markup}</span></td>
+                  <td className={cn(cell, "border-t-0 whitespace-nowrap text-right text-[13px]")}>{accNew.length > 0 && <>
+                    <button type="button" onClick={() => tickAll(accNew, true)} className="font-semibold text-tint">Tick all</button> · <button type="button" onClick={() => tickAll(accNew, false)} className="font-semibold text-tint">None</button></>}
+                  </td></tr>
+              )}
+              {accChanges.map((c) => (
+                <tr key={c.key}>
+                  <td className={cell}><b className="text-[15px]">{c.name}</b><div className="text-[12px] text-label3">{c.mfr} · accessory</div></td>
+                  <td className={cn(cell, "tnum whitespace-nowrap")}>{usd(c.cost)}</td>
+                  <td className={cell} />
+                  <td className={cn(cell, "tnum whitespace-nowrap text-right")}><s className="text-label3">{money(c.oldPrice)}</s> → <b>{money(c.newPrice)}</b></td>
+                  <td className={cn(cell, "text-right")}><button type="button" onClick={() => drop(c.key)} className="font-semibold text-tint">Undo</button></td>
+                </tr>
+              ))}
+              {accNew.map((c) => (
+                <tr key={c.key} className={cn(!c.add && "opacity-50")}>
+                  <td className={cell}><b className="text-[15px]">{c.name}</b><div className="text-[12px] text-label3">{c.mfr} · new accessory</div></td>
+                  <td className={cn(cell, "tnum whitespace-nowrap")}>{usd(c.cost)}</td>
+                  <td className={cell} />
+                  <td className={cn(cell, "tnum whitespace-nowrap text-right")}>{money(c.newPrice)}</td>
+                  <td className={cn(cell, "text-right")}>
+                    <label className="inline-flex items-center gap-2 font-semibold text-tint">
+                      <input type="checkbox" checked={c.add} onChange={(e) => patch(c.key, { add: e.target.checked })} className="h-4 w-4 accent-[var(--tint)]" />Add
+                    </label>
+                  </td>
+                </tr>
+              ))}
+              {removes.length > 0 && <tr><td colSpan={5} className={cn(head, "border-t border-sep pt-4")}>Removed from the app</td></tr>}
+              {goneCos.map((co) => {
+                const list = removes.filter((c) => c.company === co);
+                return (
+                  <tr key={`co-${co}`}><td colSpan={4} className={cn(cell, "text-[15px]")}><Trash2 className="mr-2 inline h-4 w-4 text-bad" strokeWidth={2.2} /><b>{co}</b> <span className="text-label2">— the company and all {list.length} of its models</span></td>
+                    <td className={cn(cell, "text-right")}><button type="button" onClick={() => dropAll(list.map((c) => c.key))} className="font-semibold text-tint">Undo</button></td></tr>
+                );
+              })}
+              {goneModels.map((c) => (
+                <tr key={c.key}>
+                  {nameCell(c)}
+                  <td className={cn(cell, "tnum text-label2")}>{usd(c.oldCost)}</td>
+                  <td className={cell}><span className="text-[13px] text-label2">Tier {c.oldTier}</span></td>
+                  <td className={cn(cell, "text-right text-[13px] font-semibold text-bad")}>Removed</td>
+                  <td className={cn(cell, "text-right")}><button type="button" onClick={() => drop(c.key)} className="font-semibold text-tint">Undo</button></td>
+                </tr>
+              ))}
               {pin && (
                 <tr><td colSpan={4} className={cn(cell, "text-[15px]")}><KeyRound className="mr-2 inline h-4 w-4 text-tint" strokeWidth={2.4} /><b>Admin PIN</b> <span className="text-label2">changes to the new PIN</span></td>
                   <td className={cn(cell, "text-right")}><button type="button" onClick={onDropPin} className="font-semibold text-tint">Undo</button></td></tr>
@@ -558,8 +655,17 @@ function Review({ staged, setStaged, pin, onDropPin, onMore, onSave }) {
           Saving downloads an updated copy of the app — <b className="text-label">{FILE}</b> — with the new prices. Give it to IT to replace the current file.
         </div>
         <Capsule variant="tinted" onClick={onMore}><Plus className="h-[18px] w-[18px]" strokeWidth={2.4} />More changes</Capsule>
-        <Capsule disabled={none} onClick={onSave}><Download className="h-[18px] w-[18px]" strokeWidth={2.4} />Save updated app</Capsule>
+        <Capsule disabled={none} onClick={save}><Download className="h-[18px] w-[18px]" strokeWidth={2.4} />Save updated app</Capsule>
       </div>
+      <Confirm open={sure} danger confirmLabel="Save and remove" onCancel={() => setSure(false)} onConfirm={() => { setSure(false); onSave(); }}
+        title="Remove these from the app for good?">
+        <ul className="list-disc pl-5 text-label">
+          {goneCos.map((co) => <li key={co}><b>{co}</b> — the company and all {removes.filter((c) => c.company === co).length} of its models</li>)}
+          {removing.filter((c) => !c.company).slice(0, 6).map((c) => <li key={c.key}>{c.mfr} {c.name} · {c.style}</li>)}
+          {removing.filter((c) => !c.company).length > 6 && <li>and {removing.filter((c) => !c.company).length - 6} more models</li>}
+        </ul>
+        <p>Once IT installs the saved app, the only way back is the previous file or adding them again. Your other changes are saved too.</p>
+      </Confirm>
     </>
   );
 }

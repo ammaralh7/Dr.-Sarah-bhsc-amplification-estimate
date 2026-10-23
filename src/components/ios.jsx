@@ -226,3 +226,27 @@ export function Capsule({ className, variant = "fill", ...props }) {
 }
 
 export const Checkmark = ({ className }) => <Check className={cn("h-5 w-5 text-tint", className)} strokeWidth={2.6} />;
+
+/* ── A question before something that can't be taken back (alert dialog). Cancel has the focus;
+      Escape or a click outside cancel. ── */
+export function Confirm({ open, title, children, confirmLabel = "OK", danger, onConfirm, onCancel }) {
+  useEffect(() => {
+    if (!open) return undefined;
+    const key = (e) => { if (e.key === "Escape") onCancel(); };
+    window.addEventListener("keydown", key);
+    return () => window.removeEventListener("keydown", key);
+  }, [open, onCancel]);
+  if (!open) return null;
+  return (
+    <div className="fixed inset-0 z-[60] grid place-items-center bg-black/40 p-4" onMouseDown={(e) => { if (e.target === e.currentTarget) onCancel(); }}>
+      <div role="alertdialog" aria-modal="true" aria-label={title} className="w-full max-w-md rounded-[14px] bg-card p-5 shadow-[0_10px_40px_rgba(0,0,0,0.25)]">
+        <h2 className="text-[18px] font-semibold leading-snug">{title}</h2>
+        <div className="mt-2 grid gap-2 text-[14px] leading-snug text-label2">{children}</div>
+        <div className="mt-5 flex justify-end gap-2">
+          <Capsule variant="tinted" className="h-10 px-4 text-[15px]" autoFocus onClick={onCancel}>Cancel</Capsule>
+          <Capsule className={cn("h-10 px-4 text-[15px]", danger && "bg-bad text-white")} onClick={onConfirm}>{confirmLabel}</Capsule>
+        </div>
+      </div>
+    </div>
+  );
+}
