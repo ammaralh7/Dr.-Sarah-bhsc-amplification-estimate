@@ -1,7 +1,7 @@
 /* "Update prices": reading a pasted manufacturer price list, working out what changed, the admin PIN,
    and saving an updated copy of the app. The list readers follow build/build_data.py, which built the
    app's prices from the same lists, so a pasted list lines up with the models the app already has. */
-import { MODELS, MFRS, BUILT_MFRS, RAW, PRICE_LISTS, COLUMNS, ADDONS, POLICY, SAVED, modelKey, tierFor, famStyle, applyPolicy, companies } from "@/lib/pricing";
+import { MODELS, MFRS, BUILT_MFRS, RAW, PRICE_LISTS, COLUMNS, ADDONS, POLICY, SAVED, modelKey, tierFor, famStyle, applyPolicy, companies, programOf } from "@/lib/pricing";
 import { readSmart } from "@/lib/smartread";
 import { sha256 } from "@/lib/sha256";
 import { PAGE, DOCTYPE } from "@/lib/snapshot";
@@ -106,8 +106,11 @@ const round2 = (n) => Math.round(n * 100) / 100;
 
 /** Compare a pasted list with the app's current prices for one manufacturer. The company's own reader
     (built for its current list) and the smart reader (any layout) both read it; the one that recognises
-    more of the company's models is used, the company's own on a tie. picked = staff's column choice. */
-export function readPriceList(mfr, text, picked) {
+    more of the company's models is used, the company's own on a tie. picked = staff's column choice.
+    prog: a special pricing's own sheet (e.g. NY SHIP), read by the smart reader against that program's
+    models only; a standard list never changes special prices. */
+export function readPriceList(mfr, text, picked, prog = null) {
+  if (prog) return readSmart(mfr, text, picked, prog);
   const own = readBrand(mfr, text), smart = readSmart(mfr, text, picked);
   const mine = MODELS.some((m) => m[0] === mfr);
   // accessories always come from the smart reader (the companies' own readers skip them)
@@ -136,7 +139,7 @@ function readBrand(mfr, text) {
       added.push({ type: "new", key: k, mfr, name: r.model, style: label, fam: r.fam, raw, newCost: round2(r.cost), newTier: tierFor(r.cost), add: true });
     }
   }
-  const current = MODELS.filter((m) => m[0] === mfr && !m[5]);
+  const current = MODELS.filter((m) => m[0] === mfr && !m[5] && !programOf(m));
   const missing = current.filter((m) => !found.has(modelKey(m[0], m[1], m[2])))
     .map((m) => ({ type: "missing", key: modelKey(m[0], m[1], m[2]), mfr, name: m[1], style: m[2], fam: m[3], oldCost: m[7], oldTier: m[4], remove: false }));
   return { read: rows.length, matched: found.size, total: current.length, changes, added, missing, other };
@@ -148,7 +151,7 @@ function readBrand(mfr, text) {
 const norm = (s) => s.toLowerCase().replace(/[^a-z0-9]+/g, "");
 function readTypedList(mfr, text) {
   const { rows, other } = readTyped(text);
-  const mine = MODELS.filter((m) => m[0] === mfr);
+  const mine = MODELS.filter((m) => m[0] === mfr && !programOf(m));
   const found = new Set(), changes = [], added = [];
   for (const r of rows) {
     // models on the current lists first; an older-list model only when it is the only one with that name
@@ -262,7 +265,7 @@ export function nextData({ changes, pin, brands, columns = {} }) {
     if (c?.raw && !raw[key]) raw[key] = c.raw;
   }
   for (const c of changes.filter((x) => x.type === "new" && x.add && !goneCos.has(x.mfr))) {
-    models.push([c.mfr, c.name, c.style, c.fam, tierOf(c.newCost), 0, 0]);
+    models.push([c.mfr, c.name, c.style, c.fam, tierOf(c.newCost), 0, c.prog || 0]);
     costs[c.key] = c.newCost;
     if (c.raw) raw[c.key] = c.raw;
   }

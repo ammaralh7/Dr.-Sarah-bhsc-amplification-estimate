@@ -6,7 +6,7 @@
    The PDF is optional, like costs.json: a copy built without it hides the button. Positions are in PDF
    points from the top-left of page 2 (612 × 792), measured on the 1/13/26 form. */
 import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
-import { FEES, POLICY, dispenseFee, quoteParts, billingBoxes, earsInUse, earModel, mixed, programAids, aidName } from "@/lib/pricing";
+import { FEES, POLICY, dispenseFee, quoteParts, billingBoxes, earsInUse, earModel, mixed, programAids, programOf, aidName } from "@/lib/pricing";
 
 const FILES = import.meta.glob("../assets/purchase-agreement.pdf", { eager: true, query: "?url", import: "default" });
 export const CONTRACT_URL = Object.values(FILES)[0] || null;
@@ -132,11 +132,12 @@ export async function contractBlob(s) {
     // a program price (Sonova) names the actual hearing aid picked for it, with the ear's style
     const prog = programAids(m).length > 0, name = aidName(e, m);
     // the battery has its own column, so leave it out of the model text
-    const style = (["ALL", "CUSTOM"].includes(m[3]) || prog ? e.style : m[2]).replace(/\s*·\s*(rechargeable|312 battery|10 battery|size 13)\b/gi, "");
+    const style = (["ALL", "CUSTOM"].includes(m[3]) || prog ? e.style : m[2]).replace(/\s*·\s*(rechargeable|312 battery|10 battery|size 13)\b/gi, "")
+      .replace(` · ${programOf(m)}`, "");      // a model added under special pricing carries the program in its style
     text1(ear, COL.ear, ROWS[i], 20);
     text1(m[0], COL.mfr, ROWS[i], 108);
     text1(`${name} · ${style}`, COL.model, ROWS[i], 105);
-    text1(battery(prog ? [m[0], name, e.style] : m), COL.battery, ROWS[i], 70);
+    text1(battery(prog ? [m[0], name, e.style] : [m[0], m[1], m[2].replace(` · ${programOf(m)}`, "")]), COL.battery, ROWS[i], 70);
   });
   const tiers = rows.map(([ear, e]) => [ear, earModel(e)[4]]);
   tick1(116.7, 762.4);

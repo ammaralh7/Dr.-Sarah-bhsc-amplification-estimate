@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { Columns3, PanelLeft, ReceiptText, RefreshCw, Tags } from "lucide-react";
+import { useEffect, useState } from "react";
+import { ChevronLeft, Columns3, PanelLeft, ReceiptText, RefreshCw, Tags } from "lucide-react";
 import Estimate from "@/Estimate";
 import HAPrices from "@/HAPrices";
 import Compare from "@/Compare";
@@ -7,6 +7,7 @@ import UpdatePrices from "@/UpdatePrices";
 import { BHSC_LOGO } from "@/components/ios";
 import { cn } from "@/lib/utils";
 import { MFRS, PRICE_LISTS, PRICES_UPDATED, POLICY } from "@/lib/pricing";
+import { navTo, navBack, previous, useNav } from "@/lib/nav";
 import { Drawer as SideDrawer } from "@/components/ui/side-drawer";
 import { BlurFade } from "@/components/ui/blur-fade";
 
@@ -16,19 +17,31 @@ import { BlurFade } from "@/components/ui/blur-fade";
 const tabs = () => [["estimate", "Estimate", ReceiptText], ["compare", "Compare prices", Columns3], ["haprices", `${POLICY.year} HA prices`, Tags], ["update", "Update prices", RefreshCw]];
 
 export default function App() {
-  const [tab, setTab] = useState("estimate");
+  // the page (and Update prices' step) lives in the browser's history, so back goes to the previous one
+  const nav = useNav();
+  const tab = tabs().some(([id]) => id === nav.tab) ? nav.tab : "estimate";
   const [open, setOpen] = useState(false);
   const [seed, setSeed] = useState(null);
   // bumped after new prices are saved, so the other tabs start over with them
   const [version, setVersion] = useState(0);
   const [updated, setUpdated] = useState(PRICES_UPDATED);
-  const go = (t) => { setTab(t); setOpen(false); window.scrollTo(0, 0); };
+  const go = (t) => { setOpen(false); navTo({ tab: t }); };
+  useEffect(() => { setOpen(false); window.scrollTo(0, 0); }, [nav]);
 
+  const prev = previous();
+  const prevName = prev && tabs().find(([id]) => id === prev.tab)?.[1];
+  // ‹ back arrow, then the sidebar button: at the top left of every page
   const menu = (
-    <button type="button" onClick={() => setOpen(true)} aria-label="Show sidebar" aria-expanded={open}
-      className="press -ml-2 mr-1 inline-flex h-11 w-11 items-center justify-center rounded-full text-tint focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-tint">
-      <PanelLeft className="h-[22px] w-[22px]" strokeWidth={2} />
-    </button>
+    <>
+      <button type="button" onClick={navBack} disabled={!nav.depth} aria-label={prevName ? `Back to ${prevName}` : "Back"} title={prevName ? `Back to ${prevName}` : "Back"}
+        className="press -ml-3 inline-flex h-11 w-10 items-center justify-center rounded-full text-tint focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-tint disabled:cursor-default disabled:opacity-30">
+        <ChevronLeft className="h-7 w-7" strokeWidth={2.2} />
+      </button>
+      <button type="button" onClick={() => setOpen(true)} aria-label="Show sidebar" aria-expanded={open}
+        className="press mr-1 inline-flex h-11 w-11 items-center justify-center rounded-full text-tint focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-tint">
+        <PanelLeft className="h-[22px] w-[22px]" strokeWidth={2} />
+      </button>
+    </>
   );
 
   return (

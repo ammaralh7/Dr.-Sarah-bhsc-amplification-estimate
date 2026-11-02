@@ -10,12 +10,14 @@
      matched in the list's own order. A bare model name prices all its styles when they share one price.
    - Which number is BHSC's price: the column ("last amount", "2nd from the left"…) that agrees with
      the prices the app already has; else the one saved for this company; else staff pick it once. */
-import { MODELS, RAW, COLUMNS, BUILT_MFRS, ADDONS, POLICY, modelKey, famStyle, tierFor } from "@/lib/pricing";
+import { MODELS, RAW, COLUMNS, BUILT_MFRS, ADDONS, POLICY, modelKey, famStyle, tierFor, programOf } from "@/lib/pricing";
 
 const AMOUNT = /\$\s?\d[\d,]*(?:\.\d{1,2})?|\b\d{1,3}(?:,\d{3})+(?:\.\d{1,2})?\b|\b\d+\.\d{2}\b/g;
 const toNum = (s) => parseFloat(String(s).replace(/[$,\s]/g, ""));
 const round2 = (n) => Math.round(n * 100) / 100;
 const keyOf = (m) => modelKey(m[0], m[1], m[2]);
+// a company's models with standard prices (prog null), or one special pricing's models
+const modelsOf = (mfr, prog) => MODELS.filter((m) => m[0] === mfr && (programOf(m) || null) === (prog || null));
 
 /** Words of a text: "PureCharge&GO" → pure charge go, "RIC.R" → ric r. Common shorthand on manufacturer
     lists is spelled out (the same on both sides, so it only ever helps a match). */
@@ -87,17 +89,18 @@ export function rowsOf(text) {
 }
 
 /* The ways a model can be named on a list. order = its row number for lists stored by row (Signia). */
-function unitsFor(mfr) {
-  const mine = MODELS.filter((m) => m[0] === mfr), units = [], byRaw = new Map();
-  // the company's own name is implied on its list ("Oticon CROS PX" is listed as "CROS PX")
-  const brand = new Set(tokens(mfr)), named = (t) => { const n = t.filter((w) => !brand.has(w)); return n.length ? n : t; };
+function unitsFor(mfr, prog) {
+  const mine = modelsOf(mfr, prog), units = [], byRaw = new Map();
+  // the company's own name is implied on its list ("Oticon CROS PX" is listed as "CROS PX"), and so is a
+  // special pricing's ("NY SHIP · Vivia 7" is listed as "Vivia 7" on the NY SHIP sheet)
+  const brand = new Set([...tokens(mfr), ...(prog ? tokens(prog) : [])]), named = (t) => { const n = t.filter((w) => !brand.has(w)); return n.length ? n : t; };
   mine.forEach((m) => { const r = RAW[keyOf(m)]; if (r && !m[5]) { if (!byRaw.has(r)) byRaw.set(r, []); byRaw.get(r).push(m); } });
   for (const [r, ms] of byRaw) {
     const row = r.match(/^(\d+)\|(.*)$/);
     if (row) units.push({ name: named(tokens(row[2])), style: [], order: +row[1], models: ms, list: true });
     else { const [n, st = ""] = r.split("|"); units.push({ name: named(tokens(n)), style: tokens(st), models: ms, list: true }); }
   }
-  mine.forEach((m) => units.push({ name: named(tokens(m[1])), style: tokens(m[2]).filter((t) => !["all", "styles", "one", "price", "per", "level"].includes(t)), models: [m] }));
+  mine.forEach((m) => units.push({ name: named(tokens(m[1])), style: tokens(m[2]).filter((t) => !["all", "styles", "one", "price", "per", "level"].includes(t) && !brand.has(t)), models: [m] }));
   const byName = new Map();
   mine.filter((m) => !m[5]).forEach((m) => { if (!byName.has(m[1])) byName.set(m[1], []); byName.get(m[1]).push(m); });
   for (const [n, ms] of byName) if (ms.length > 1 && new Set(ms.map((m) => m[7])).size === 1) units.push({ name: named(tokens(n)), style: [], models: ms });
@@ -215,14 +218,14 @@ export function guessType(text) {
  * Read one company's list. rule (optional) = { from: "L" | "R", i } picked by staff.
  * Returns the usual result plus { smart: true, rule, needsColumn, sample, unclear }.
  */
-export function readSmart(mfr, text, picked) {
-  const rows = rowsOf(text), units = unitsFor(mfr);
+export function readSmart(mfr, text, picked, prog = null) {
+  const rows = rowsOf(text), units = unitsFor(mfr, prog);
   // a line whose own words make it an accessory is not a hearing aid, unless it is a hearing aid's own
   // line on the list (Signia's "Active Pro (1HA + Charger)")
   const raw = matchRows(rows, units);
   const strongAcc = rows.map((r, i) => accByWords(r) && !(raw[i] && raw[i].unit && raw[i].unit.list));
   const matches = raw.map((m, i) => (strongAcc[i] ? null : m));
-  const mine = MODELS.filter((m) => m[0] === mfr);
+  const mine = modelsOf(mfr, prog);
   // which amount is BHSC's price
   let rule = null, auto = false;
   const width = Math.max(0, ...rows.map((r) => r.amts.length));
@@ -255,7 +258,7 @@ export function readSmart(mfr, text, picked) {
     }
     // the app's prices can't tell (a new company, or a copy without BHSC prices): staff's pick, the
     // column saved for this company, the list's own headings, then (built-in companies) the last price
-    if (!auto) rule = picked || COLUMNS[mfr] || headerRule(text) || (BUILT_MFRS.includes(mfr) ? { from: "R", i: 0 } : null);
+    if (!auto) rule = picked || COLUMNS[prog ? `${mfr}|${prog}` : mfr] || headerRule(text) || (BUILT_MFRS.includes(mfr) ? { from: "R", i: 0 } : null);
   }
   if (picked) { rule = picked; auto = false; }   // staff's pick always wins
   const sample = rows.find((r) => r.amts.length > 1) || null;
@@ -282,18 +285,22 @@ export function readSmart(mfr, text, picked) {
       return;
     }
     // under an accessory heading, or (on a known company's list) cheaper than any hearing aid tier: an accessory or part
-    if (accByHeading(r) || (mine.length && cost != null && cost < POLICY.bands[0])) { accRows.push(r); return; }
+    // (a special pricing's own sheet has no accessories, and its prices can be low)
+    if (!prog && (accByHeading(r) || (mine.length && cost != null && cost < POLICY.bands[0]))) { accRows.push(r); return; }
     if (cost == null || cost < 50 || cost > 25000 || !/[a-z]{2}/i.test(r.own)) return;
-    const name = r.own.slice(0, 80), fam = guessType(`${r.own} ${r.section}`), style = famStyle(fam), key = modelKey(mfr, name, style);
+    // a new special-pricing model carries its program in the style, apart from the standard model
+    const name = r.own.slice(0, 80), fam = guessType(`${r.own} ${r.section}`), style = famStyle(fam) + (prog ? ` · ${prog}` : ""), key = modelKey(mfr, name, style);
     if (added.some((a) => a.key === key) || mine.some((m) => keyOf(m) === key)) return;
     // a list for a new company, or typed lines, are meant as new models; on a known company's list,
     // a line the app doesn't have is often an accessory, so it waits for a tick
     const add = !mine.length || typedLike;
-    added.push({ type: "new", key, mfr, name, style, fam, autoStyle: true, quiet: !add, newCost: round2(cost), newTier: tierFor(cost), add });
+    added.push({ type: "new", key, mfr, name, style, fam, prog: prog || undefined, autoStyle: true, quiet: !add, newCost: round2(cost), newTier: tierFor(cost), add });
   });
-  const current = mine.filter((m) => !m[5]);
+  // (special pricing is mostly from older lists, and its sheet lists all of its models)
+  const current = prog ? mine : mine.filter((m) => !m[5]);
   const partial = found.size < current.length / 2;
   const missing = partial ? [] : current.filter((m) => !found.has(keyOf(m)))
     .map((m) => ({ type: "missing", key: keyOf(m), mfr, name: m[1], style: m[2], fam: m[3], oldCost: m[7], oldTier: m[4], remove: false }));
-  return { ...result, matched: found.size, total: current.length, changes, added, missing, other: [], unclear, typed: partial, accessories: readAccessoryRows(mfr, accRows, rule) };
+  return { ...result, matched: found.size, total: current.length, changes, added, missing, other: [], unclear, typed: partial,
+    accessories: prog ? { changes: [], added: [] } : readAccessoryRows(mfr, accRows, rule) };
 }

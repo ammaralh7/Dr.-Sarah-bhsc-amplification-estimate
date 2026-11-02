@@ -8,7 +8,7 @@ import { cn } from "@/lib/utils";
 import {
   MODELS, ADDONS, TIERS, FEES, MFRS, STYLES, money, fits, isCros, styleAvailable, modelsFor, billingCode, quoteLines, quoteTotal, modelKey,
   EAR_NAMES, mixed, earsInUse, earModel, orderReady, orderMfrs, accessoriesFor, accessoryPrice, earPrice, MIXED_CONFIRMED, refund, crosPair, includedText,
-  POLICY, pct,
+  POLICY, pct, programOf,
 } from "@/lib/pricing";
 import { copyText } from "@/lib/copy";
 import { CONTRACT_URL, contractBlob } from "@/lib/contract";
@@ -148,7 +148,7 @@ function Receipt({ s, set, onCopy, onReset }) {
   else if (mixed(s) && !MIXED_CONFIRMED) warnings.push("Different aid in each ear — mixed-pair pricing isn’t confirmed yet. Check the total before quoting.");
   if (s.n === 2 && !mixed(s) && ms.some(isCros)) warnings.push("A CROS transmitter goes on one ear. For a CROS/BiCROS, turn off “Same aid in both ears” and choose the hearing aid for the other ear.");
   if (ms.some((m) => m[5])) warnings.push("Older price list — confirm the cost with the manufacturer before ordering.");
-  if (ms.some((m) => m[6])) warnings.push("NY SHIP program — SHIP includes free shipping, so check whether the $25 applies.");
+  if (ms.some((m) => programOf(m) === "NY SHIP program")) warnings.push("NY SHIP program — SHIP includes free shipping, so check whether the $25 applies.");
   if (ms.some(isCros)) warnings.push("CROS/BiCROS — bill with contralateral routing codes when dispensed with a hearing aid on the same date.");
   const what = s.n === 2 ? (mixed(s) ? "Two aids, one per ear" : "Pair") : "One aid";
   const text = [

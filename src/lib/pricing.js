@@ -1,6 +1,6 @@
 import data from "@/data/pricing.json";
 
-// [mfr, name, style label, family, tier, older(0/1), nySHIP(0/1), BHSC cost]
+// [mfr, name, style label, family, tier, older(0/1), special pricing (program name, or 0), BHSC cost]
 // Built from the price lists in the repo by build/build_web.py; rebuild to update prices.
 export const modelKey = (mfr, name, style) =>
   `${mfr}-${name}-${style}`.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 180) || "model";
@@ -81,9 +81,11 @@ export const programAids = (m) => {
   const re = new RegExp(`^(Audeo|Naida) ${lvl[1]}\\b`);
   return [...new Set(MODELS.filter((x) => x[0] === "Phonak" && x[3] === m[3] && re.test(x[1])).map((x) => x[1]))];
 };
-/* Special pricing (a program's own prices) has its own "Pricing" choice under the manufacturer, apart from
-   the standard models: Phonak's Sonova program and ReSound's NY SHIP program. */
-export const programOf = (m) => (m[6] ? "NY SHIP program" : m[0] === "Phonak" && /^Sonova program L\d0$/.test(m[1]) ? "Sonova special pricing" : null);
+/* Special pricing (a program's own prices, e.g. Phonak's Sonova program, ReSound's NY SHIP program, or one
+   added in Update prices) has its own "Pricing" choice under the manufacturer, apart from the standard models.
+   The program's name is the model's 7th field; older saved data had 1 for NY SHIP and nothing for Sonova. */
+export const programOf = (m) => (m[6] === 1 ? "NY SHIP program" : typeof m[6] === "string" && m[6] ? m[6]
+  : m[0] === "Phonak" && /^Sonova program L\d0$/.test(m[1]) ? "Sonova special pricing" : null);
 export const programsFor = (mfr) => [...new Set(MODELS.filter((m) => m[0] === mfr).map(programOf).filter(Boolean))];
 const inProgram = (m, prog) => (programOf(m) || null) === (prog || null);
 export const styleAvailable = (mfr, st, prog = null) => MODELS.some((m) => m[0] === mfr && fits(m[3], st) && inProgram(m, prog));

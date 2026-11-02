@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ArrowLeft, ArrowRight, Check, ClipboardPaste, Download, KeyRound, Lock, Plus, SlidersHorizontal, Trash2, TriangleAlert } from "lucide-react";
 import { NavBar, ThemeButton, SearchField, Pills, Capsule, Confirm } from "@/components/ios";
-import { MODELS, MFRS, PRICE_LISTS, TIERS, FAMILIES, HAS_COSTS, POLICY, famStyle, modelKey, money, tierFor, pct } from "@/lib/pricing";
+import { MODELS, MFRS, PRICE_LISTS, TIERS, FAMILIES, HAS_COSTS, POLICY, famStyle, modelKey, money, tierFor, pct, programOf, programsFor } from "@/lib/pricing";
 import { readPriceList, pastes, styleLabel, checkPin, makePin, nextData, savedPage, downloadPage, useData } from "@/lib/priceupdate";
 import { ruleName } from "@/lib/smartread";
 import PricingEditor from "@/PricingEditor";
+import { navTo, navBack, useNav } from "@/lib/nav";
 import { cn } from "@/lib/utils";
 
 /* Update prices (admin PIN): paste a manufacturer's new price list or change/add a model by hand, review
@@ -32,14 +33,18 @@ const removing = (c) => c.type === "remove" || (c.type === "missing" && c.remove
 
 export default function UpdatePrices({ menu = null, onSaved }) {
   const [open, setOpen] = useState(false);
-  const [step, setStep] = useState("choose");
+  // each step is a page in the browser's history, so back (the ‹ arrow, or the browser's) goes to the step before
+  const nav = useNav();
+  const step = (nav.tab === "update" && nav.step) || "choose";
   const [staged, setStaged] = useState([]);
   const [brands, setBrands] = useState([]);
   const [pin, setPin] = useState(null);
   const [done, setDone] = useState(false);
   // which number on a list is BHSC's price, when staff picked it (saved with the app per company)
   const [columns, setColumns] = useState({});
-  const go = (s) => { setStep(s); setDone(false); window.scrollTo(0, 0); };
+  const go = (s) => navTo({ tab: "update", step: s });
+  const back = () => (nav.depth ? navBack() : go("choose"));
+  useEffect(() => { setDone(false); }, [nav]);
   const stage = (items, mfr) => {
     setStaged((p) => [...p.filter((c) => !items.some((x) => x.key === c.key)), ...items]);
     if (mfr) setBrands((b) => (b.includes(mfr) ? b : [...b, mfr]));
@@ -91,13 +96,13 @@ export default function UpdatePrices({ menu = null, onSaved }) {
             {done ? <Saved onDone={() => go("choose")} /> : step === "choose" ? (
               <Choose pending={pending} go={go} />
             ) : step === "paste" ? (
-              <Paste onBack={() => go("choose")} onUse={(items, mfr, rule) => { stage(items, mfr); if (rule) setColumns((c) => ({ ...c, [mfr]: rule })); go("review"); }} />
+              <Paste onBack={back} onUse={(items, mfr, rule, col) => { stage(items, mfr); if (rule) setColumns((c) => ({ ...c, [col || mfr]: rule })); go("review"); }} />
             ) : step === "pricing" ? (
-              <PricingEditor start={policy || POLICY} onBack={() => go("choose")} onUse={(p) => { stage([{ type: "policy", key: "policy", policy: p }]); go("review"); }} />
+              <PricingEditor start={policy || POLICY} onBack={back} onUse={(p) => { stage([{ type: "policy", key: "policy", policy: p }]); go("review"); }} />
             ) : step === "edit" ? (
-              <Edit count={staged.filter(counts).length} staged={staged} onBack={() => go("choose")} onStage={(items) => stage(items)} onReview={() => go("review")} />
+              <Edit count={staged.filter(counts).length} staged={staged} onBack={back} onStage={(items) => stage(items)} onReview={() => go("review")} />
             ) : step === "pin" ? (
-              <ChangePin onBack={() => go("choose")} onSet={(p) => { setPin(p); go("review"); }} />
+              <ChangePin onBack={back} onSet={(p) => { setPin(p); go("review"); }} />
             ) : (
               <Review staged={staged} setStaged={setStaged} pin={pin} onDropPin={() => setPin(null)} onMore={() => go("choose")} onSave={save} />
             )}
@@ -205,17 +210,23 @@ function Paste({ onBack, onUse }) {
   // "+ New company": its list is read the same way; a name the app already has goes to that company
   const known = MFRS.find(([n]) => n.toLowerCase() === company.trim().toLowerCase());
   const mfr = pickMfr === NEW ? (known ? known[0] : company.trim()) : pickMfr;
+  // standard prices, or one of the company's special pricings (its own sheet, e.g. NY SHIP), or a new one
+  const [pickProg, setProg] = useState("");
+  const [progName, setProgName] = useState("");
+  const progs = mfr ? programsFor(mfr) : [], typedProg = progName.trim();
+  const prog = pickProg === NEW ? progs.find((x) => x.toLowerCase() === typedProg.toLowerCase()) || typedProg || null : pickProg || null;
+  const col = prog ? `${mfr}|${prog}` : mfr;      // the price column staff picked is kept per list
   const [picked, setPicked] = useState({});
   const [choosing, setChoosing] = useState(false);
-  const r = useMemo(() => (text.trim() && mfr ? readPriceList(mfr, text, picked[mfr]) : null), [mfr, text, picked]);
-  const typed = r ? !!r.typed : !pastes(mfr);
+  const r = useMemo(() => (text.trim() && mfr && (pickProg !== NEW || prog) ? readPriceList(mfr, text, picked[col], prog) : null), [mfr, text, picked, col, prog, pickProg]);
+  const typed = r ? !!r.typed : !pastes(mfr) || !!prog;
   // a list that fits another company far better than the one picked
   const other = useMemo(() => {
-    if (!r || r.matched >= Math.max(3, r.total * 0.3)) return null;
+    if (!r || prog || r.matched >= Math.max(3, r.total * 0.3)) return null;
     const best = MFRS.map(([n]) => n).filter((n) => n !== mfr).map((n) => [n, readPriceList(n, text).matched]).sort((a, b) => b[1] - a[1])[0];
     return best && best[1] >= 5 && best[1] > r.matched * 2 ? best[0] : null;
   }, [r, mfr, text]);
-  const pick = (k, n) => { setPicked((p) => ({ ...p, [mfr]: k < n / 2 ? { from: "L", i: k } : { from: "R", i: n - 1 - k } })); setChoosing(false); };
+  const pick = (k, n) => { setPicked((p) => ({ ...p, [col]: k < n / 2 ? { from: "L", i: k } : { from: "R", i: n - 1 - k } })); setChoosing(false); };
   const ask = !!(r && r.smart && (r.needsColumn || choosing) && r.sample);
   const tierMoves = r ? r.changes.filter((c) => c.newTier !== c.oldTier).length : 0;
   const missing = r && !typed ? r.missing : [];
@@ -235,20 +246,29 @@ function Paste({ onBack, onUse }) {
   return (
     <>
       <div className="flex min-w-0 flex-wrap items-center gap-x-5 gap-y-2.5 rounded-[12px] bg-card px-4 py-2.5">
-        <Pills label="Manufacturer" value={pickMfr} onChange={setMfr} options={[...MFRS.map(([n]) => ({ value: n, label: n })), { value: NEW, label: "+ New company", title: "A manufacturer the app doesn’t have yet" }]} />
+        <Pills label="Manufacturer" value={pickMfr} onChange={(v) => { setMfr(v); setProg(""); }} options={[...MFRS.map(([n]) => ({ value: n, label: n })), { value: NEW, label: "+ New company", title: "A manufacturer the app doesn’t have yet" }]} />
         {pickMfr === NEW && (
           <label className="flex items-center gap-2 text-[13px] font-semibold text-label2">Company name
             <input value={company} onChange={(e) => setCompany(e.target.value)} placeholder="e.g. Widex" autoFocus className={cn(input, "h-8 w-44")} />
+          </label>
+        )}
+        <Pills label="Pricing" value={pickProg} onChange={setProg}
+          options={[{ value: "", label: "Standard" }, ...progs.map((x) => ({ value: x, label: x })), { value: NEW, label: "+ New special pricing", title: "A program with its own prices, e.g. VA pricing" }]} />
+        {pickProg === NEW && (
+          <label className="flex items-center gap-2 text-[13px] font-semibold text-label2">Special pricing name
+            <input value={progName} onChange={(e) => setProgName(e.target.value)} placeholder="e.g. VA pricing" autoFocus className={cn(input, "h-8 w-44")} />
           </label>
         )}
         <button type="button" onClick={onBack} className="ml-auto inline-flex items-center gap-1 text-[15px] font-semibold text-tint"><ArrowLeft className="h-4 w-4" strokeWidth={2.4} />Back</button>
       </div>
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_380px]">
         <div className="grid min-w-0 content-start gap-2">
-          <p className="px-1 text-[14px] leading-snug text-label2">{pickMfr === NEW && !known
+          <p className="px-1 text-[14px] leading-snug text-label2">{prog || pickProg === NEW
+            ? `Paste the ${prog || "special pricing"} sheet for ${mfr || "the company"} (open it, press Ctrl+A then Ctrl+C, click in the box and press Ctrl+V), or type one model and its price per line. Only ${prog || "these"} prices change; ${mfr || "the company"}’s standard prices stay as they are.`
+            : pickMfr === NEW && !known
             ? "Open the new company’s price list (PDF or Excel), press Ctrl+A then Ctrl+C, click in the box and press Ctrl+V. The app reads each hearing aid and its price and guesses its style; if the list has several prices per line, you click BHSC’s price once. You can also type one model and its price per line."
             : howTo(mfr)}</p>
-          <textarea aria-label={`${mfr || "New company"} price list`} value={text} onChange={(e) => setText(e.target.value)} spellCheck={false}
+          <textarea aria-label={`${mfr || "New company"}${prog ? ` ${prog}` : ""} price list`} value={text} onChange={(e) => setText(e.target.value)} spellCheck={false}
             placeholder={typed ? EXAMPLE[mfr] || "Model name  1200" : `Paste the ${mfr} price list here`}
             className="h-[460px] w-full resize-y rounded-[12px] bg-card p-4 font-mono text-[13px] leading-relaxed text-label outline-none shadow-[0_0_0_1px_var(--sep)] focus:shadow-[0_0_0_2px_var(--tint)]" />
         </div>
@@ -300,7 +320,7 @@ function Paste({ onBack, onUse }) {
             </>
           )}
           <p className="text-[13px] leading-snug text-label2">Only the BHSC price is used. Nothing changes until you review and save.</p>
-          <Capsule className="justify-self-start" disabled={!found || ask} onClick={() => onUse([...r.changes, ...r.added, ...missing, ...acc.changes, ...acc.added], mfr, r.smart && !r.auto ? r.rule : null)}>
+          <Capsule className="justify-self-start" disabled={!found || ask} onClick={() => onUse([...r.changes, ...r.added, ...missing, ...acc.changes, ...acc.added], prog ? null : mfr, r.smart && !r.auto ? r.rule : null, col)}>
             {ask ? "Pick BHSC’s price first" : r && r.read && !found ? "No changes found"
               : r && !r.changes.length && !fresh && !missing.length && !acc.changes.length ? "No price changes — see accessories" : "Review changes"}<ArrowRight className="h-4 w-4" strokeWidth={2.4} />
           </Capsule>
@@ -317,20 +337,25 @@ function Edit({ count, staged, onBack, onStage, onReview }) {
   const [q, setQ] = useState("");
   const [ask, setAsk] = useState(null);          // the removal waiting for "Are you sure?"
   const [co, setCo] = useState("");
+  const [pg, setPg] = useState("");               // the special pricing to remove: "<company>|<program>"
   const [pick, setPick] = useState(null);
   const [cost, setCost] = useState("");
-  const [nm, setNm] = useState({ mfr: "Oticon", company: "", name: "", style: "", fam: "RIC", cost: "" });
+  const [nm, setNm] = useState({ mfr: "Oticon", company: "", prog: "", progName: "", name: "", style: "", fam: "RIC", cost: "" });
   const [note, setNote] = useState("");
   const costRef = useRef(null);
   const words = q.trim().toLowerCase().split(/\s+/).filter(Boolean);
-  const hits = words.length ? MODELS.filter((m) => words.every((w) => `${m[0]} ${m[1]} ${m[2]}`.toLowerCase().includes(w)))
+  const hits = words.length ? MODELS.filter((m) => words.every((w) => `${m[0]} ${m[1]} ${m[2]} ${programOf(m) || ""}`.toLowerCase().includes(w)))
     .sort((a, b) => a[5] - b[5]).slice(0, 12) : [];
   const c = price(cost), nc = price(nm.cost);
   // a new company typed with the same name as one the app has (any capitals) goes to that one
   const company = nm.company.trim(), known = MFRS.find(([n]) => n.toLowerCase() === company.toLowerCase());
   const nmfr = nm.mfr === NEW ? (known ? known[0] : company) : nm.mfr;
-  // shown the way the app shows that manufacturer's styles, so the next pasted list finds it
-  const nstyle = !nm.style.trim() ? famStyle(nm.fam) : nmfr === "Starkey" ? styleLabel("Starkey", "", nm.style.trim()) : nm.style.trim();
+  // special pricing: one of the company's programs, or a new one (a name it already has, any capitals, is that one)
+  const progs = nmfr ? programsFor(nmfr) : [], typed = nm.progName.trim();
+  const nprog = nm.prog === NEW ? progs.find((x) => x.toLowerCase() === typed.toLowerCase()) || typed : nm.prog || null;
+  // shown the way the app shows that manufacturer's styles, so the next pasted list finds it; a special-pricing
+  // model carries its program in the style, so it stays apart from the standard model of the same name
+  const nstyle = (!nm.style.trim() ? famStyle(nm.fam) : nmfr === "Starkey" ? styleLabel("Starkey", "", nm.style.trim()) : nm.style.trim()) + (nprog ? ` · ${nprog}` : "");
   const nkey = modelKey(nmfr, nm.name.trim(), nstyle);
   const exists = nm.name.trim() && MODELS.some((m) => modelKey(m[0], m[1], m[2]) === nkey);
   const flash = (t) => { setNote(t); setTimeout(() => setNote(""), 4000); };
@@ -342,12 +367,16 @@ function Edit({ count, staged, onBack, onStage, onReview }) {
     setPick(null); setCost(""); setQ("");
   };
   const gone = new Set(staged.filter(removing).map((x) => x.key));
-  const removal = (m, company) => ({ type: "remove", key: modelKey(m[0], m[1], m[2]), mfr: m[0], name: m[1], style: m[2], fam: m[3], oldCost: m[7], oldTier: m[4], company });
+  const removal = (m, company, program) => ({ type: "remove", key: modelKey(m[0], m[1], m[2]), mfr: m[0], name: m[1], style: m[2], fam: m[3], oldCost: m[7], oldTier: m[4], company, program });
   const coModels = co ? MODELS.filter((m) => m[0] === co) : [];
+  const allProgs = MFRS.flatMap(([n]) => programsFor(n).map((x) => [n, x]));
+  const [pgMfr, pgName] = pg ? pg.split("|") : [];
+  const pgModels = pg ? MODELS.filter((m) => m[0] === pgMfr && programOf(m) === pgName) : [];
+  const removeProgram = () => { onStage(pgModels.map((m) => removal(m, undefined, `${pgMfr} ${pgName}`))); flash(`${pgMfr} ${pgName} and its ${pgModels.length} ${pgModels.length === 1 ? "model" : "models"} will be removed when you save.`); setPg(""); setAsk(null); };
   const removeModel = (m) => { onStage([removal(m)]); flash(`${m[1]} · ${m[2]} will be removed when you save.`); setPick(null); setQ(""); setAsk(null); };
   const removeCompany = () => { onStage(coModels.map((m) => removal(m, co))); flash(`${co} and its ${coModels.length} models will be removed when you save.`); setCo(""); setAsk(null); };
   const addModel = () => {
-    onStage([{ type: "new", key: nkey, mfr: nmfr, name: nm.name.trim(), style: nstyle, fam: nm.fam, autoStyle: !nm.style.trim(), newCost: nc, newTier: tierFor(nc), add: true }]);
+    onStage([{ type: "new", key: nkey, mfr: nmfr, name: nm.name.trim(), style: nstyle, fam: nm.fam, prog: nprog || undefined, autoStyle: !nm.style.trim(), newCost: nc, newTier: tierFor(nc), add: true }]);
     flash(`${nm.name.trim()} added to the changes.`);
     setNm((p) => ({ ...p, name: "", style: "", cost: "" }));
   };
@@ -374,7 +403,7 @@ function Edit({ count, staged, onBack, onStage, onReview }) {
                 <li key={modelKey(m[0], m[1], m[2])}>
                   <button type="button" onClick={() => { setPick(m); setCost(""); setTimeout(() => costRef.current?.focus(), 0); }}
                     className="press flex w-full items-baseline gap-3 rounded-[8px] px-2 py-1.5 text-left text-[14px] hover:bg-fill">
-                    <span className="min-w-0 flex-1 truncate"><b className="text-[15px]">{m[1]}</b> <span className="text-label2">· {m[2]} · {m[0]}{m[5] ? " · older list" : ""}</span>{gone.has(modelKey(m[0], m[1], m[2])) && <span className="ml-1.5 rounded-full bg-warn px-1.5 py-0.5 text-[11px] font-semibold text-warn-ink">to be removed</span>}</span>
+                    <span className="min-w-0 flex-1 truncate"><b className="text-[15px]">{m[1]}</b> <span className="text-label2">· {m[2]} · {m[0]}{m[5] ? " · older list" : ""}</span>{programOf(m) && <span className="ml-1.5 rounded-full bg-tint-soft px-1.5 py-0.5 text-[11px] font-semibold text-tint">{programOf(m)}</span>}{gone.has(modelKey(m[0], m[1], m[2])) && <span className="ml-1.5 rounded-full bg-warn px-1.5 py-0.5 text-[11px] font-semibold text-warn-ink">to be removed</span>}</span>
                     <span className="shrink-0 text-[13px] text-label2">Tier {m[4]}</span>
                     <span className="tnum w-[5.5rem] shrink-0 text-right font-semibold">{usd(m[7])}</span>
                   </button>
@@ -384,7 +413,7 @@ function Edit({ count, staged, onBack, onStage, onReview }) {
           )}
           {pick && (
             <div className="grid gap-3 rounded-[10px] bg-fill p-4">
-              <div className="text-[15px]"><b>{pick[0]} {pick[1]}</b> <span className="text-label2">· {pick[2]}</span></div>
+              <div className="text-[15px]"><b>{pick[0]} {pick[1]}</b> <span className="text-label2">· {pick[2]}</span>{programOf(pick) && <span className="ml-1.5 rounded-full bg-tint-soft px-1.5 py-0.5 text-[11px] font-semibold text-tint">{programOf(pick)}</span>}</div>
               <div className="text-[14px] text-label2">Now: <b className="tnum text-label">{usd(pick[7])}</b> · Tier {pick[4]} · patients pay {patient(pick[4])}</div>
               <label className="grid gap-1 text-[13px] font-semibold text-label2">New BHSC price (per aid)
                 <input ref={costRef} inputMode="decimal" value={cost} onChange={(e) => setCost(e.target.value)} placeholder="$0.00" className={cn(input, "bg-card")} />
@@ -401,12 +430,20 @@ function Edit({ count, staged, onBack, onStage, onReview }) {
 
         <section aria-label="Add a new model" className={cn(card, "grid content-start gap-3 p-5")}>
           <h2 className="text-[18px] font-semibold">Add a new model</h2>
-          <Pills label="Manufacturer" value={nm.mfr} onChange={(v) => setNm((p) => ({ ...p, mfr: v }))}
+          <Pills label="Manufacturer" value={nm.mfr} onChange={(v) => setNm((p) => ({ ...p, mfr: v, prog: "" }))}
             options={[...MFRS.map(([n]) => ({ value: n, label: n })), { value: NEW, label: "+ New company", title: "A manufacturer the app doesn’t have yet" }]} />
           {nm.mfr === NEW && (
             <label className="grid gap-1 text-[13px] font-semibold text-label2">Company name
               <input value={nm.company} onChange={(e) => setNm((p) => ({ ...p, company: e.target.value }))} placeholder="e.g. Widex" autoFocus className={input} />
               <span className="font-normal text-label3">{known ? `${known[0]} is already in the app; the model is added there.` : "The company gets its own button everywhere in the app once you save."}</span>
+            </label>
+          )}
+          <Pills label="Pricing" value={nm.prog} onChange={(v) => setNm((p) => ({ ...p, prog: v }))}
+            options={[{ value: "", label: "Standard" }, ...progs.map((x) => ({ value: x, label: x })), { value: NEW, label: "+ New special pricing", title: "A program with its own prices, e.g. VA pricing" }]} />
+          {nm.prog === NEW && (
+            <label className="grid gap-1 text-[13px] font-semibold text-label2">Special pricing name
+              <input value={nm.progName} onChange={(e) => setNm((p) => ({ ...p, progName: e.target.value }))} placeholder="e.g. VA pricing" autoFocus className={input} />
+              <span className="font-normal text-label3">{nprog && progs.includes(nprog) ? `${nmfr} already has ${nprog}; the model is added there.` : `It gets its own choice under ${nmfr || "the company"} (Pricing: Standard | ${typed || "this name"}) once you save.`}</span>
             </label>
           )}
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
@@ -424,7 +461,7 @@ function Edit({ count, staged, onBack, onStage, onReview }) {
           </label>
           {nc && <div className="text-[14px]">Tier <b>{tierFor(nc)}</b> · patients pay <b>{patient(tierFor(nc))}</b> (one aid / two aids)</div>}
           {exists && <p className="text-[13px] text-warn-ink">This model is already in the app — change its price on the left.</p>}
-          <Capsule className="h-10 justify-self-start px-4 text-[15px]" disabled={!nm.name.trim() || !nc || exists || !nmfr} onClick={addModel}><Plus className="h-4 w-4" strokeWidth={2.4} />Add model</Capsule>
+          <Capsule className="h-10 justify-self-start px-4 text-[15px]" disabled={!nm.name.trim() || !nc || exists || !nmfr || (nm.prog === NEW && !typed)} onClick={addModel}><Plus className="h-4 w-4" strokeWidth={2.4} />Add model</Capsule>
           <p className="text-[12px] leading-snug text-label3">“Type” decides where it shows when choosing a hearing aid and which billing code the contract uses.</p>
         </section>
       </div>
@@ -440,9 +477,27 @@ function Edit({ count, staged, onBack, onStage, onReview }) {
         </Capsule>
       </section>
 
+      {allProgs.length > 0 && (
+        <section aria-label="Remove special pricing" className={cn(card, "flex flex-wrap items-center gap-x-5 gap-y-3 p-5")}>
+          <div className="min-w-0 basis-64">
+            <h2 className="text-[18px] font-semibold">Remove special pricing</h2>
+            <p className="text-[13px] leading-snug text-label2">A program ends: its prices and models come out; the company’s standard models stay.</p>
+          </div>
+          <Pills aria="Special pricing to remove" value={pg} onChange={setPg} options={allProgs.map(([n, x]) => ({ value: `${n}|${x}`, label: `${n} · ${x}` }))} />
+          <Capsule variant="tinted" className="ml-auto h-10 px-4 text-[15px] text-bad" disabled={!pg} onClick={() => setAsk({ program: pg })}>
+            <Trash2 className="h-4 w-4" strokeWidth={2.2} />{pg ? `Remove ${pgName}` : "Remove…"}
+          </Capsule>
+        </section>
+      )}
+
       <Confirm open={!!ask?.model} danger confirmLabel="Remove model" onCancel={() => setAsk(null)} onConfirm={() => removeModel(ask.model)}
         title={ask?.model ? `Remove ${ask.model[0]} ${ask.model[1]} · ${ask.model[2]}?` : ""}>
         <p>It won’t show in estimates, comparisons or the price list once the updated app is saved and installed.</p>
+        <p>You can still undo it on the review screen before saving.</p>
+      </Confirm>
+      <Confirm open={!!ask?.program} danger confirmLabel={`Remove ${pgName || ""}`} onCancel={() => setAsk(null)} onConfirm={removeProgram}
+        title={ask?.program ? `Remove ${pgMfr} ${pgName} and its ${pgModels.length} ${pgModels.length === 1 ? "model" : "models"}?` : ""}>
+        <p>Its prices come out of the app, and {pgMfr}’s Pricing choice no longer offers it. {pgMfr}’s standard models stay.</p>
         <p>You can still undo it on the review screen before saving.</p>
       </Confirm>
       <Confirm open={!!ask?.company} danger confirmLabel={`Remove ${ask?.company || ""}`} onCancel={() => setAsk(null)} onConfirm={removeCompany}
@@ -495,9 +550,11 @@ function Review({ staged, setStaged, pin, onDropPin, onMore, onSave }) {
   const tierMoves = prices.filter((c) => c.newTier !== c.oldTier).length;
   const removes = staged.filter((c) => c.type === "remove");
   const removed = missing.filter((c) => c.remove).length + removes.length;
-  // a removed company is one row; single models are a row each
-  const goneCos = [...new Set(removes.filter((c) => c.company).map((c) => c.company))];
-  const goneModels = removes.filter((c) => !c.company);
+  // a removed company or special pricing is one row; single models are a row each
+  const goneCos = [...new Set(removes.filter((c) => c.company || c.program).map((c) => c.company || c.program))];
+  const goneModels = removes.filter((c) => !c.company && !c.program);
+  const groupOf = (g) => removes.filter((c) => (c.company || c.program) === g);
+  const groupText = (g) => { const n = groupOf(g).length; return `— the ${groupOf(g)[0]?.company ? "company" : "special pricing"} and ${n === 1 ? "its 1 model" : `all ${n} of its models`}`; };
   const dropAll = (keys) => setStaged((p) => p.filter((c) => !keys.includes(c.key)));
   const removing = staged.filter((c) => c.type === "remove" || (c.type === "missing" && c.remove));
   const save = () => (removing.length ? setSure(true) : onSave());
@@ -625,9 +682,9 @@ function Review({ staged, setStaged, pin, onDropPin, onMore, onSave }) {
               ))}
               {removes.length > 0 && <tr><td colSpan={5} className={cn(head, "border-t border-sep pt-4")}>Removed from the app</td></tr>}
               {goneCos.map((co) => {
-                const list = removes.filter((c) => c.company === co);
+                const list = groupOf(co);
                 return (
-                  <tr key={`co-${co}`}><td colSpan={4} className={cn(cell, "text-[15px]")}><Trash2 className="mr-2 inline h-4 w-4 text-bad" strokeWidth={2.2} /><b>{co}</b> <span className="text-label2">— the company and all {list.length} of its models</span></td>
+                  <tr key={`co-${co}`}><td colSpan={4} className={cn(cell, "text-[15px]")}><Trash2 className="mr-2 inline h-4 w-4 text-bad" strokeWidth={2.2} /><b>{co}</b> <span className="text-label2">{groupText(co)}</span></td>
                     <td className={cn(cell, "text-right")}><button type="button" onClick={() => dropAll(list.map((c) => c.key))} className="font-semibold text-tint">Undo</button></td></tr>
                 );
               })}
@@ -660,9 +717,9 @@ function Review({ staged, setStaged, pin, onDropPin, onMore, onSave }) {
       <Confirm open={sure} danger confirmLabel="Save and remove" onCancel={() => setSure(false)} onConfirm={() => { setSure(false); onSave(); }}
         title="Remove these from the app for good?">
         <ul className="list-disc pl-5 text-label">
-          {goneCos.map((co) => <li key={co}><b>{co}</b> — the company and all {removes.filter((c) => c.company === co).length} of its models</li>)}
-          {removing.filter((c) => !c.company).slice(0, 6).map((c) => <li key={c.key}>{c.mfr} {c.name} · {c.style}</li>)}
-          {removing.filter((c) => !c.company).length > 6 && <li>and {removing.filter((c) => !c.company).length - 6} more models</li>}
+          {goneCos.map((co) => <li key={co}><b>{co}</b> {groupText(co)}</li>)}
+          {removing.filter((c) => !c.company && !c.program).slice(0, 6).map((c) => <li key={c.key}>{c.mfr} {c.name} · {c.style}</li>)}
+          {removing.filter((c) => !c.company && !c.program).length > 6 && <li>and {removing.filter((c) => !c.company && !c.program).length - 6} more models</li>}
         </ul>
         <p>Once IT installs the saved app, the only way back is the previous file or adding them again. Your other changes are saved too.</p>
       </Confirm>
