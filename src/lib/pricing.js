@@ -73,16 +73,21 @@ export const money = (n) => "$" + (Math.round(n * 100) % 100
 export const fits = (fam, st) => fam === st || fam === "ALL" || (fam === "CUSTOM" && ["ITE","ITC","CIC","IIC"].includes(st));
 export const isCros = (m) => /CROS/i.test(m[1]);
 /* Sonova Special Support Program (Phonak, older lists): one price for every Audéo L or Naída L of that level
-   ("L70 / L90 (Naida and Audeo) – all form factors"). It stays one model in the list; staff then pick the
-   actual hearing aid (ear.aid), which the contract names. */
+   ("L70 / L90 (Naida and Audeo) – all form factors"). The model list shows each of those hearing aids at the
+   program price; picking one sets ear.aid, which the contract names. */
 export const programAids = (m) => {
   const lvl = m && m[0] === "Phonak" && m[1].match(/^Sonova program (L\d0)$/);
   if (!lvl) return [];
   const re = new RegExp(`^(Audeo|Naida) ${lvl[1]}\\b`);
   return [...new Set(MODELS.filter((x) => x[0] === "Phonak" && x[3] === m[3] && re.test(x[1])).map((x) => x[1]))];
 };
-export const styleAvailable = (mfr, st) => MODELS.some((m) => m[0] === mfr && fits(m[3], st));
-export const modelsFor = (mfr, st) => MODELS.map((m, i) => [m, i]).filter(([m]) => m[0] === mfr && fits(m[3], st));
+/* Special pricing (a program's own prices) has its own "Pricing" choice under the manufacturer, apart from
+   the standard models: Phonak's Sonova program and ReSound's NY SHIP program. */
+export const programOf = (m) => (m[6] ? "NY SHIP program" : m[0] === "Phonak" && /^Sonova program L\d0$/.test(m[1]) ? "Sonova special pricing" : null);
+export const programsFor = (mfr) => [...new Set(MODELS.filter((m) => m[0] === mfr).map(programOf).filter(Boolean))];
+const inProgram = (m, prog) => (programOf(m) || null) === (prog || null);
+export const styleAvailable = (mfr, st, prog = null) => MODELS.some((m) => m[0] === mfr && fits(m[3], st) && inProgram(m, prog));
+export const modelsFor = (mfr, st, prog = null) => MODELS.map((m, i) => [m, i]).filter(([m]) => m[0] === mfr && fits(m[3], st) && inProgram(m, prog));
 
 /* Included with every price: up to 4 follow-up visits in the first year (2026 tier pricing). Tiers 7–11
    also include the LACE AI program (BHSC handover: "LACE AI is included in tiers 7–11"). Both in POLICY. */
