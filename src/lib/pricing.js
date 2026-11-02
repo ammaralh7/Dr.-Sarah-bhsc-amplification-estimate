@@ -72,6 +72,15 @@ export const money = (n) => "$" + (Math.round(n * 100) % 100
   : Math.round(n).toLocaleString("en-US"));
 export const fits = (fam, st) => fam === st || fam === "ALL" || (fam === "CUSTOM" && ["ITE","ITC","CIC","IIC"].includes(st));
 export const isCros = (m) => /CROS/i.test(m[1]);
+/* Sonova Special Support Program (Phonak, older lists): one price for every Audéo L or Naída L of that level
+   ("L70 / L90 (Naida and Audeo) – all form factors"). It stays one model in the list; staff then pick the
+   actual hearing aid (ear.aid), which the contract names. */
+export const programAids = (m) => {
+  const lvl = m && m[0] === "Phonak" && m[1].match(/^Sonova program (L\d0)$/);
+  if (!lvl) return [];
+  const re = new RegExp(`^(Audeo|Naida) ${lvl[1]}\\b`);
+  return [...new Set(MODELS.filter((x) => x[0] === "Phonak" && x[3] === m[3] && re.test(x[1])).map((x) => x[1]))];
+};
 export const styleAvailable = (mfr, st) => MODELS.some((m) => m[0] === mfr && fits(m[3], st));
 export const modelsFor = (mfr, st) => MODELS.map((m, i) => [m, i]).filter(([m]) => m[0] === mfr && fits(m[3], st));
 
@@ -94,6 +103,9 @@ export const EAR_NAMES = ["Right ear", "Left ear"];
 export const mixed = (s) => s.n === 2 && !s.same;
 export const earsInUse = (s) => (mixed(s) ? s.ears : s.ears.slice(0, 1));
 export const earModel = (e) => (e && e.model != null ? MODELS[e.model] : null);
+// The hearing aid itself: the one picked for a program model, else the model
+export const aidName = (e, m = earModel(e)) => (e?.aid && programAids(m).includes(e.aid) ? e.aid : m[1]);
+const aidSub = (e, m) => (aidName(e, m) === m[1] ? `${m[0]} ${m[1]} · ${m[2]}` : `${m[0]} ${m[1]} · ${aidName(e, m)}`);
 /* CROS/BiCROS (a CROS on one ear, a hearing aid on the other): the tier pricing prices it as a
    monaural CROS plus a monaural hearing aid. */
 export const crosPair = (s) => mixed(s) && earsInUse(s).some((e) => { const m = earModel(e); return m && isCros(m); });
@@ -138,10 +150,10 @@ export function quoteLines(s) {
   const k = s.n === 2 ? 1 : 0;
   const out = [];
   if (mixed(s)) {
-    s.ears.forEach((e, i) => { const m = earModel(e); out.push({ label: `${EAR_NAMES[i]} · Tier ${m[4]}`, sub: `${m[0]} ${m[1]} · ${m[2]}`, amount: earAmount(s, m) }); });
+    s.ears.forEach((e, i) => { const m = earModel(e); out.push({ label: `${EAR_NAMES[i]} · Tier ${m[4]}`, sub: aidSub(e, m), amount: earAmount(s, m) }); });
   } else {
     const m = earModel(s.ears[0]);
-    out.push({ label: `${s.n === 2 ? "Hearing aids (pair)" : `Hearing aid${s.aidEar ? ` (${s.aidEar === "L" ? "left" : "right"} ear)` : ""}`} · Tier ${m[4]}`, sub: `${m[0]} ${m[1]} · ${m[2]}`, amount: TIERS[m[4]][k] });
+    out.push({ label: `${s.n === 2 ? "Hearing aids (pair)" : `Hearing aid${s.aidEar ? ` (${s.aidEar === "L" ? "left" : "right"} ear)` : ""}`} · Tier ${m[4]}`, sub: aidSub(s.ears[0], m), amount: TIERS[m[4]][k] });
   }
   if (s.incl === "all") {
     out.push({ label: "Fitting, orientation & dispense", sub: s.n === 2 ? "Two aids" : "One aid", amount: FEES.fit[k] });
