@@ -1,20 +1,31 @@
 /* Manufacturer → style → model for one hearing aid (or one ear), shared by the Estimate and
-   Compare prices tabs. Manufacturer and style are buttons; the model is a search box that opens
-   the matching list right under it. k: 0/1 shows the one-aid/pair price on each model, null the
+   Compare prices tabs. Manufacturer, pricing (standard or a special program, for the companies that
+   have one) and style are buttons; the model is a search box that opens the matching list right
+   under it. k: 0/1 shows the one-aid/pair price on each model, null the
    per-ear price (different aid in each ear). side 0/1 adds the right (red) / left (blue) ear dot.
    compact: fewer buttons per row, for the narrow Compare columns. */
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Check, ChevronDown, Search } from "lucide-react";
 import { Group } from "@/components/ios";
-import { MODELS, TIERS, MFRS, STYLES, money, fits, isCros, styleAvailable, modelsFor, modelKey, earModel, earPrice, programAids } from "@/lib/pricing";
+import { MODELS, TIERS, MFRS, STYLES, money, fits, isCros, styleAvailable, modelsFor, modelKey, earModel, earPrice, programAids, programsFor, aidName } from "@/lib/pricing";
 import { cn } from "@/lib/utils";
 
-export const blankEar = () => ({ mfr: null, style: null, model: null, mkey: null, aid: null });
+// prog: the special pricing picked under the manufacturer (null = standard prices)
+export const blankEar = () => ({ mfr: null, prog: null, style: null, model: null, mkey: null, aid: null });
+const PROGRAM_HINT = { "Sonova special pricing": "Audéo L and Naída L at program prices", "NY SHIP program": "ReSound’s NY SHIP program prices" };
 
 export function EarOrder({ title, side, e, k, onChange, compact = false, wide = false }) {
   const sel = earModel(e);
-  const aids = programAids(sel);
+  const progs = e.mfr ? programsFor(e.mfr) : [];
   const price = (m) => (k == null ? earPrice(m[4]) : TIERS[m[4]][k]);
+  const pricing = progs.length > 0 && (
+    <Field label="Pricing" hint={PROGRAM_HINT[e.prog]}>
+      <Choices label="Pricing" value={e.prog || "standard"} cols={compact ? "grid-cols-1" : "grid-cols-2 sm:flex sm:flex-wrap"}
+        options={[{ value: "standard", label: "Standard" }, ...progs.map((p) => ({ value: p, label: p }))]}
+        onChange={(v) => { const prog = v === "standard" ? null : v;
+          onChange({ prog, model: null, mkey: null, aid: null, style: e.style && styleAvailable(e.mfr, e.style, prog) ? e.style : null }); }} />
+    </Field>
+  );
   return (
     <Group header={side == null ? title : <span className="inline-flex items-center gap-1.5"><span className={cn("h-2.5 w-2.5 rounded-full", side === 0 ? "bg-[#ff3b30]" : "bg-[#0a84ff]")} />{title}</span>}
       footer={sel && sel[5] ? "Older price list — confirm the cost with the manufacturer before ordering." : null}>
@@ -22,40 +33,37 @@ export function EarOrder({ title, side, e, k, onChange, compact = false, wide = 
         const mfr = (
           <Choices label="Manufacturer" value={e.mfr} cols={compact ? "grid-cols-2" : "grid-cols-2 sm:grid-cols-[repeat(auto-fit,minmax(6.75rem,1fr))]"}
             options={MFRS.map(([name, color]) => ({ value: name, label: name, dot: color }))}
-            onChange={(v) => onChange({ mfr: v, model: null, mkey: null, aid: null, style: e.style && styleAvailable(v, e.style) ? e.style : null })} />
+            onChange={(v) => onChange({ mfr: v, prog: null, model: null, mkey: null, aid: null, style: e.style && styleAvailable(v, e.style) ? e.style : null })} />
         );
         const style = (
           <Choices label="Style" value={e.style} cols={compact ? "grid-cols-3" : "grid-cols-3 sm:grid-cols-6"}
-            options={STYLES.map(([st, long]) => ({ value: st, label: st, title: long, disabled: !e.mfr || !styleAvailable(e.mfr, st) }))}
+            options={STYLES.map(([st, long]) => ({ value: st, label: st, title: long, disabled: !e.mfr || !styleAvailable(e.mfr, st, e.prog) }))}
             onChange={(st) => onChange({ style: st, ...(e.model != null && fits(MODELS[e.model][3], st) ? {} : { model: null, mkey: null, aid: null }) })} />
         );
         const styleHint = e.style ? STYLES.find(([st]) => st === e.style)?.[1] : !e.mfr ? "Choose the manufacturer first" : null;
-        // wide (one full-width card on a computer): manufacturer and style side by side, one row
+        // wide (one full-width card on a computer): manufacturer and style side by side, one row; pricing under it
         return wide ? (
-          <div className="bg-card pl-4">
-            <div className="hairline grid min-w-0 grid-cols-1 gap-3 py-2.5 pr-4 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)] lg:gap-6">
-              <Sub label="Manufacturer">{mfr}</Sub>
-              <Sub label="Style" hint={styleHint}>{style}</Sub>
+          <>
+            <div className="bg-card pl-4">
+              <div className="hairline grid min-w-0 grid-cols-1 gap-3 py-2.5 pr-4 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)] lg:gap-6">
+                <Sub label="Manufacturer">{mfr}</Sub>
+                <Sub label="Style" hint={styleHint}>{style}</Sub>
+              </div>
             </div>
-          </div>
+            {pricing}
+          </>
         ) : (
           <>
             <Field label="Manufacturer">{mfr}</Field>
+            {pricing}
             <Field label="Style" hint={styleHint}>{style}</Field>
           </>
         );
       })()}
-      <Field label="Model" last={!aids.length}>
+      <Field label="Model" last>
         <ModelPicker e={e} price={price} perEar={k == null}
-          onPick={(i) => { const m = MODELS[i]; onChange({ model: i, mkey: modelKey(m[0], m[1], m[2]), aid: null }); }} />
+          onPick={(i, aid) => { const m = MODELS[i]; onChange({ model: i, mkey: modelKey(m[0], m[1], m[2]), aid }); }} />
       </Field>
-      {/* a program price (Sonova): which hearing aid it is, so the contract names it */}
-      {aids.length > 0 && (
-        <Field label="Hearing aid" hint={e.aid ? null : "Choose one for the contract"} last>
-          <Choices label="Hearing aid" value={e.aid} cols={compact ? "grid-cols-1" : "grid-cols-2 sm:grid-cols-3"}
-            options={aids.map((a) => ({ value: a, label: a, title: a }))} onChange={(a) => onChange({ aid: a })} />
-        </Field>
-      )}
     </Group>
   );
 }
@@ -108,10 +116,13 @@ function ModelPicker({ e, price, perEar, onPick }) {
   const [hi, setHi] = useState(0);
   const box = useRef(null), input = useRef(null), listRef = useRef(null);
   const ready = !!(e.mfr && e.style);
-  const all = useMemo(() => (ready ? modelsFor(e.mfr, e.style) : []), [ready, e.mfr, e.style]);
+  // one entry per model; a program model (Sonova) lists each hearing aid it covers, at the program price
+  const all = useMemo(() => (ready ? modelsFor(e.mfr, e.style, e.prog) : [])
+    .flatMap(([m, i]) => { const aids = programAids(m); return aids.length ? aids.map((aid) => ({ m, i, aid })) : [{ m, i, aid: null }]; }),
+  [ready, e.mfr, e.style, e.prog]);
   const words = q.trim().toLowerCase().split(/\s+/).filter(Boolean);
-  const match = all.filter(([m]) => words.every((w) => `${m[1]} ${m[2]} tier ${m[4]}`.toLowerCase().includes(w)));
-  const cur = match.filter(([m]) => !m[5]), old = match.filter(([m]) => m[5]);
+  const match = all.filter(({ m, aid }) => words.every((w) => `${aid || ""} ${m[1]} ${m[2]} tier ${m[4]}`.toLowerCase().includes(w)));
+  const cur = match.filter(({ m }) => !m[5]), old = match.filter(({ m }) => m[5]);
   const flat = [...cur, ...old];
   const sel = earModel(e);
 
@@ -126,25 +137,26 @@ function ModelPicker({ e, price, perEar, onPick }) {
   }, [open]);
   useEffect(() => { listRef.current?.querySelector(`[data-i="${hi}"]`)?.scrollIntoView({ block: "nearest" }); }, [hi]);
 
-  const pick = (i) => { onPick(i); setOpen(false); setQ(""); };
+  const pick = (o) => { onPick(o.i, o.aid); setOpen(false); setQ(""); };
   const key = (ev) => {
     if (ev.key === "ArrowDown") { ev.preventDefault(); setHi((h) => Math.min(h + 1, flat.length - 1)); }
     else if (ev.key === "ArrowUp") { ev.preventDefault(); setHi((h) => Math.max(h - 1, 0)); }
-    else if (ev.key === "Enter") { ev.preventDefault(); if (flat[hi]) pick(flat[hi][1]); }
+    else if (ev.key === "Enter") { ev.preventDefault(); if (flat[hi]) pick(flat[hi]); }
     else if (ev.key === "Escape") { setOpen(false); setQ(""); }
   };
   let n = -1;
-  const rows = (items) => items.map(([m, i]) => {
+  const rows = (items) => items.map((o) => {
+    const { m, i, aid } = o, on = e.model === i && (e.aid || null) === aid;
     n += 1; const at = n;
     return (
-      <button key={i} type="button" role="option" aria-selected={e.model === i} data-i={at} onMouseEnter={() => setHi(at)} onClick={() => pick(i)}
+      <button key={`${i}${aid || ""}`} type="button" role="option" aria-selected={on} data-i={at} onMouseEnter={() => setHi(at)} onClick={() => pick(o)}
         className={cn("flex w-full items-center gap-3 rounded-[8px] px-3 py-2 text-left", at === hi ? "bg-fill" : "")}>
         <span className="min-w-0 flex-1">
-          <span className="block truncate text-[15px] font-medium">{m[1]}{isCros(m) && <span className="ml-1.5 rounded bg-fill2 px-1 text-[11px] font-semibold text-label2">CROS</span>}</span>
-          <span className="block truncate text-[13px] text-label2">{m[2]} · Tier {m[4]}</span>
+          <span className="block truncate text-[15px] font-medium">{aid || m[1]}{isCros(m) && <span className="ml-1.5 rounded bg-fill2 px-1 text-[11px] font-semibold text-label2">CROS</span>}</span>
+          <span className="block truncate text-[13px] text-label2">{aid ? m[1] : m[2]} · Tier {m[4]}</span>
         </span>
         <span className="tnum shrink-0 text-[15px] text-label2">{money(price(m))}</span>
-        <span className="w-4 shrink-0">{e.model === i && <Check className="h-4 w-4 text-tint" strokeWidth={2.6} />}</span>
+        <span className="w-4 shrink-0">{on && <Check className="h-4 w-4 text-tint" strokeWidth={2.6} />}</span>
       </button>
     );
   });
@@ -152,17 +164,17 @@ function ModelPicker({ e, price, perEar, onPick }) {
   return (
     <div ref={box} className="grid min-w-0 grid-cols-1 gap-2">
       {!open ? (
-        <button type="button" disabled={!ready} onClick={() => setOpen(true)} aria-haspopup="listbox" aria-label={sel ? `Model: ${sel[1]}. Change` : "Choose a model"}
+        <button type="button" disabled={!ready} onClick={() => setOpen(true)} aria-haspopup="listbox" aria-label={sel ? `Model: ${aidName(e, sel)}. Change` : "Choose a model"}
           className="press flex h-10 w-full min-w-0 items-center gap-3 rounded-[9px] bg-fill px-3 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-tint enabled:hover:bg-fill2 disabled:cursor-not-allowed disabled:opacity-40">
           {sel ? (
             <>
-              <span className="min-w-0 flex-1 truncate text-[15px]"><span className="font-semibold">{sel[1]}</span><span className="text-label2"> · {sel[2]} · Tier {sel[4]}</span></span>
+              <span className="min-w-0 flex-1 truncate text-[15px]"><span className="font-semibold">{aidName(e, sel)}</span><span className="text-label2"> · {aidName(e, sel) === sel[1] ? sel[2] : sel[1]} · Tier {sel[4]}</span></span>
               <span className="tnum shrink-0 text-[15px] font-semibold">{money(price(sel))}{perEar ? <span className="font-normal text-label2"> / ear</span> : null}</span>
             </>
           ) : (
             <>
               <Search className="h-[18px] w-[18px] shrink-0 text-label2" strokeWidth={2.2} />
-              <span className="flex-1 text-[15px] text-label2">{ready ? `Search ${all.length} ${e.mfr} ${e.style} models` : "Choose the manufacturer and style first"}</span>
+              <span className="flex-1 text-[15px] text-label2">{ready ? `Search ${all.length} ${e.prog || e.mfr} ${e.style} models` : "Choose the manufacturer and style first"}</span>
             </>
           )}
           <ChevronDown className="h-4 w-4 shrink-0 text-label3" strokeWidth={2.4} />
@@ -171,7 +183,7 @@ function ModelPicker({ e, price, perEar, onPick }) {
         <>
           <label className="flex h-10 items-center gap-2 rounded-[9px] bg-fill px-3 shadow-[inset_0_0_0_2px_var(--tint)]">
             <Search className="h-[18px] w-[18px] shrink-0 text-tint" strokeWidth={2.4} />
-            <input ref={input} value={q} onChange={(ev) => setQ(ev.target.value)} onKeyDown={key} placeholder={`Search ${e.mfr} ${e.style} models`}
+            <input ref={input} value={q} onChange={(ev) => setQ(ev.target.value)} onKeyDown={key} placeholder={`Search ${e.prog || e.mfr} ${e.style} models`}
               role="combobox" aria-expanded="true" aria-label="Search models" autoComplete="off"
               className="h-full w-0 min-w-0 flex-1 bg-transparent text-[15px] text-label outline-none placeholder:text-label2" />
             <span className="shrink-0 text-[13px] text-label2">{match.length} of {all.length}</span>
