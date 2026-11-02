@@ -6,13 +6,14 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Check, ChevronDown, Search } from "lucide-react";
 import { Group } from "@/components/ios";
-import { MODELS, TIERS, MFRS, STYLES, money, fits, isCros, styleAvailable, modelsFor, modelKey, earModel, earPrice } from "@/lib/pricing";
+import { MODELS, TIERS, MFRS, STYLES, money, fits, isCros, styleAvailable, modelsFor, modelKey, earModel, earPrice, programAids } from "@/lib/pricing";
 import { cn } from "@/lib/utils";
 
-export const blankEar = () => ({ mfr: null, style: null, model: null, mkey: null });
+export const blankEar = () => ({ mfr: null, style: null, model: null, mkey: null, aid: null });
 
 export function EarOrder({ title, side, e, k, onChange, compact = false, wide = false }) {
   const sel = earModel(e);
+  const aids = programAids(sel);
   const price = (m) => (k == null ? earPrice(m[4]) : TIERS[m[4]][k]);
   return (
     <Group header={side == null ? title : <span className="inline-flex items-center gap-1.5"><span className={cn("h-2.5 w-2.5 rounded-full", side === 0 ? "bg-[#ff3b30]" : "bg-[#0a84ff]")} />{title}</span>}
@@ -21,12 +22,12 @@ export function EarOrder({ title, side, e, k, onChange, compact = false, wide = 
         const mfr = (
           <Choices label="Manufacturer" value={e.mfr} cols={compact ? "grid-cols-2" : "grid-cols-2 sm:grid-cols-[repeat(auto-fit,minmax(6.75rem,1fr))]"}
             options={MFRS.map(([name, color]) => ({ value: name, label: name, dot: color }))}
-            onChange={(v) => onChange({ mfr: v, model: null, mkey: null, style: e.style && styleAvailable(v, e.style) ? e.style : null })} />
+            onChange={(v) => onChange({ mfr: v, model: null, mkey: null, aid: null, style: e.style && styleAvailable(v, e.style) ? e.style : null })} />
         );
         const style = (
           <Choices label="Style" value={e.style} cols={compact ? "grid-cols-3" : "grid-cols-3 sm:grid-cols-6"}
             options={STYLES.map(([st, long]) => ({ value: st, label: st, title: long, disabled: !e.mfr || !styleAvailable(e.mfr, st) }))}
-            onChange={(st) => onChange({ style: st, ...(e.model != null && fits(MODELS[e.model][3], st) ? {} : { model: null, mkey: null }) })} />
+            onChange={(st) => onChange({ style: st, ...(e.model != null && fits(MODELS[e.model][3], st) ? {} : { model: null, mkey: null, aid: null }) })} />
         );
         const styleHint = e.style ? STYLES.find(([st]) => st === e.style)?.[1] : !e.mfr ? "Choose the manufacturer first" : null;
         // wide (one full-width card on a computer): manufacturer and style side by side, one row
@@ -44,10 +45,17 @@ export function EarOrder({ title, side, e, k, onChange, compact = false, wide = 
           </>
         );
       })()}
-      <Field label="Model" last>
+      <Field label="Model" last={!aids.length}>
         <ModelPicker e={e} price={price} perEar={k == null}
-          onPick={(i) => { const m = MODELS[i]; onChange({ model: i, mkey: modelKey(m[0], m[1], m[2]) }); }} />
+          onPick={(i) => { const m = MODELS[i]; onChange({ model: i, mkey: modelKey(m[0], m[1], m[2]), aid: null }); }} />
       </Field>
+      {/* a program price (Sonova): which hearing aid it is, so the contract names it */}
+      {aids.length > 0 && (
+        <Field label="Hearing aid" hint={e.aid ? null : "Choose one for the contract"} last>
+          <Choices label="Hearing aid" value={e.aid} cols={compact ? "grid-cols-1" : "grid-cols-2 sm:grid-cols-3"}
+            options={aids.map((a) => ({ value: a, label: a, title: a }))} onChange={(a) => onChange({ aid: a })} />
+        </Field>
+      )}
     </Group>
   );
 }

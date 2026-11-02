@@ -3,7 +3,7 @@ import { ArrowRight, Copy, Plus, RotateCcw, X } from "lucide-react";
 import { NavBar, NavButton, ThemeButton, Group, Row, Capsule, Pills } from "@/components/ios";
 import { EarOrder, blankEar } from "@/components/order";
 import { UndoPill } from "@/components/ui/undo-pill";
-import { FEES, POLICY, money, quoteLines, quoteTotal, earModel, hasLace, includedText } from "@/lib/pricing";
+import { FEES, POLICY, money, quoteLines, quoteTotal, earModel, aidName, hasLace, includedText } from "@/lib/pricing";
 import { cn } from "@/lib/utils";
 import { copyText } from "@/lib/copy";
 
@@ -31,7 +31,7 @@ export default function Compare({ menu = null, onUse }) {
     `${c.n === 2 ? "Two aids" : "One aid"} · ${c.incl === "all" ? "fitting, orientation & dispense and shipping included" : "hearing aid only"}${c.molds ? ` · ${c.molds === 2 ? "two earmolds" : "one earmold"}` : ""}`, "",
     ...c.opts.map((e, i) => {
       const m = earModel(e);
-      return m ? `Option ${LETTERS[i]}: ${m[0]} ${m[1]} (${m[2]}) · Tier ${m[4]}${hasLace([m[4]]) ? " · includes LACE AI" : ""} — ${money(totals[i])}` : null;
+      return m ? `Option ${LETTERS[i]}: ${m[0]} ${m[1]} (${aidName(e, m) === m[1] ? m[2] : aidName(e, m)}) · Tier ${m[4]}${hasLace([m[4]]) ? " · includes LACE AI" : ""} — ${money(totals[i])}` : null;
     }).filter(Boolean),
     "", "Includes up to 4 follow-up visits in the first year.",
   ].join("\n");
