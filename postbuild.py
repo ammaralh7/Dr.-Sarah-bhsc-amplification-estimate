@@ -1,6 +1,6 @@
 """After `vite build`: move the page's own <title> and <meta> tags to the very top of
-dist/index.html. Vite puts the inlined CSS and JS first, but the web host reads the page title from
-the first 8 KB, and phones need the viewport tag early. Only the page's own tags are moved: they
+dist/index.html. Vite puts the inlined CSS and JS first, but some viewers read the page title from
+the first 8 KB only, and phones need the viewport tag early. Only the page's own tags are moved: they
 sit after the last </script>. Bundled libraries contain <title> and <meta> strings of their own
 inside their code, which must stay untouched."""
 import os
